@@ -8,10 +8,11 @@ services:
       context: ./contract-deployer
       dockerfile: Dockerfile
     env_file: .env
+    entrypoint: ./entrypoints/contract-deployer.sh
     volumes:
       - ./checkpoints:/var/upnode/checkpoints
       - ./optimism:/var/upnode/optimism
-      - ./deployments:/var/upnode/deployments
+      - ./data:/var/upnode/data
 
   op-geth:
     build:
@@ -22,7 +23,13 @@ services:
     volumes:
       - ./checkpoints:/var/upnode/checkpoints
       - ./jwtsecret:/var/upnode/jwtsecret
+      - ./data:/var/upnode/data
       - ./datadir:/var/upnode/datadir
+    expose:
+      - 8545
+      - 8551
+    depends_on:
+      - contract-deployer
 
   op-node:
     build:
@@ -33,6 +40,8 @@ services:
     volumes:
       - ./checkpoints:/var/upnode/checkpoints
       - ./jwtsecret:/var/upnode/jwtsecret
+    depends_on:
+      - op-geth
 
   op-batcher:
     build:
@@ -42,12 +51,20 @@ services:
     entrypoint: ./entrypoints/op-batcher.sh
     volumes:
       - ./checkpoints:/var/upnode/checkpoints
+    depends_on:
+      - op-geth
+      - op-node
 
   op-proposer:
     build:
       context: ./optimism/op-proposer
       dockerfile: Dockerfile
-    env_file: .env
+    env_file:
+      - .env
+      - ./data/deployments.env
     entrypoint: ./entrypoints/op-proposer.sh
     volumes:
       - ./checkpoints:/var/upnode/checkpoints
+    depends_on:
+      - op-geth
+      - op-node
