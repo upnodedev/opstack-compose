@@ -1,0 +1,53 @@
+version: '3'
+
+# Note: L1 node must be synced, otherwise you may need to do redeploy after it has been synced
+
+services:
+  contract-deployer:
+    build:
+      context: ./contract-deployer
+      dockerfile: Dockerfile
+    env_file: .env
+    volumes:
+      - ./checkpoints:/var/upnode/checkpoints
+      - ./optimism:/var/upnode/optimism
+      - ./deployments:/var/upnode/deployments
+
+  op-geth:
+    build:
+      context: ./op-geth
+      dockerfile: Dockerfile
+    env_file: .env
+    entrypoint: ./entrypoints/op-geth.sh
+    volumes:
+      - ./checkpoints:/var/upnode/checkpoints
+      - ./jwtsecret:/var/upnode/jwtsecret
+      - ./datadir:/var/upnode/datadir
+
+  op-node:
+    build:
+      context: ./optimism/op-node
+      dockerfile: Dockerfile
+    env_file: .env
+    entrypoint: ./entrypoints/op-node.sh
+    volumes:
+      - ./checkpoints:/var/upnode/checkpoints
+      - ./jwtsecret:/var/upnode/jwtsecret
+
+  op-batcher:
+    build:
+      context: ./optimism/op-batcher
+      dockerfile: Dockerfile
+    env_file: .env
+    entrypoint: ./entrypoints/op-batcher.sh
+    volumes:
+      - ./checkpoints:/var/upnode/checkpoints
+
+  op-proposer:
+    build:
+      context: ./optimism/op-proposer
+      dockerfile: Dockerfile
+    env_file: .env
+    entrypoint: ./entrypoints/op-proposer.sh
+    volumes:
+      - ./checkpoints:/var/upnode/checkpoints
