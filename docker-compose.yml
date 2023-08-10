@@ -68,3 +68,4 @@ services:
     depends_on:
       - op-geth
       - op-node
+      - op-batcher
