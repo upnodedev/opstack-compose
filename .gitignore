@@ -4,3 +4,4 @@ datadir
 deployments
 data
 checkpoints
+.env
