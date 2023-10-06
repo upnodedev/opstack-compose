@@ -1,6 +1,7 @@
 version: '3'
 
 # Note: L1 node must be synced, otherwise you may need to do redeploy after it has been synced
+# Note: Required optimism repo version: v1.1.4
 
 services:
   contract-deployer:
