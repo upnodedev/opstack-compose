@@ -1,72 +1,10 @@
-version: '3'
-
-# Note: L1 node must be synced, otherwise you may need to do redeploy after it has been synced
-# Note: Required optimism repo version: v1.1.4
+version: '3.9'
 
 services:
-  contract-deployer:
+  force-clone:
     build:
-      context: ./contract-deployer
+      context: .
       dockerfile: Dockerfile
-    env_file: .env
-    entrypoint: ./entrypoints/contract-deployer.sh
     volumes:
-      - ./checkpoints:/var/upnode/checkpoints
-      - ./optimism:/var/upnode/optimism
-      - ./data:/var/upnode/data
-
-  op-geth:
-    build:
-      context: ./op-geth
-      dockerfile: Dockerfile
-    env_file: .env
-    entrypoint: ./entrypoints/op-geth.sh
-    volumes:
-      - ./checkpoints:/var/upnode/checkpoints
-      - ./jwtsecret:/var/upnode/jwtsecret
-      - ./data:/var/upnode/data
-      - ./datadir:/var/upnode/datadir
-    expose:
-      - 8545
-      - 8551
-    depends_on:
-      - contract-deployer
-
-  op-node:
-    build:
-      context: ./optimism/op-node
-      dockerfile: Dockerfile
-    env_file: .env
-    entrypoint: ./entrypoints/op-node.sh
-    volumes:
-      - ./checkpoints:/var/upnode/checkpoints
-      - ./jwtsecret:/var/upnode/jwtsecret
-    depends_on:
-      - op-geth
-
-  op-batcher:
-    build:
-      context: ./optimism/op-batcher
-      dockerfile: Dockerfile
-    env_file: .env
-    entrypoint: ./entrypoints/op-batcher.sh
-    volumes:
-      - ./checkpoints:/var/upnode/checkpoints
-    depends_on:
-      - op-geth
-      - op-node
-
-  op-proposer:
-    build:
-      context: ./optimism/op-proposer
-      dockerfile: Dockerfile
-    env_file:
-      - .env
-      - ./data/deployments.env
-    entrypoint: ./entrypoints/op-proposer.sh
-    volumes:
-      - ./checkpoints:/var/upnode/checkpoints
-    depends_on:
-      - op-geth
-      - op-node
-      - op-batcher
+      - ./data/optimism:/app/data/optimism
+      - ./data/op-geth:/app/data/op-geth
