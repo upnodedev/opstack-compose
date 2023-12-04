@@ -1,12 +1,8 @@
 #!/bin/sh
 
-# Init geth
-if [ ! -e "/var/upnode/checkpoints" ]; then
-  geth init --datadir=/var/upnode/datadir /var/upnode/data/genesis.json
-fi
-
-geth \
-  --datadir /var/upnode/datadir \
+cd /app/data/op-geth
+./build/bin/geth \
+  --datadir ./datadir \
   --http \
   --http.corsdomain="*" \
   --http.vhosts="*" \
@@ -21,10 +17,9 @@ geth \
   --gcmode=archive \
   --nodiscover \
   --maxpeers=0 \
-  --networkid=$CHAIN_ID \
+  --networkid=42069 \
   --authrpc.vhosts="*" \
   --authrpc.addr=0.0.0.0 \
   --authrpc.port=8551 \
-  --authrpc.jwtsecret=/var/upnode/jwtsecret/jwt.txt \
-  --rollup.disabletxpoolgossip=true \
-  --txlookuplimit=0
+  --authrpc.jwtsecret=./jwt.txt \
+  --rollup.disabletxpoolgossip=true

@@ -1,21 +1,24 @@
 # Use Ubuntu as the base image
 FROM ubuntu:22.04
 
+# Set environment variables to non-interactive (this prevents some prompts)
+ENV DEBIAN_FRONTEND=noninteractive
+
 ENV NODE_VERSION 20
 ENV GO_VERSION 1.21.2
 
 # Update and install basic dependencies
 RUN apt-get update && \
-    apt-get install -y git make jq curl wget direnv build-essential pkg-config libssl-dev openssl && \
+    apt-get install -y git make jq curl wget direnv build-essential pkg-config libssl-dev openssl ca-certificates && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Install Node.js using NVM and pnpm
-RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash && \
-    export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")" && \
-    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" && \
-    nvm install ${NODE_VERSION} && \
-    npm install -g pnpm
+# Install Node.js
+RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - && \
+    apt-get install -y nodejs
+
+# Install PNPM
+RUN npm install -g pnpm
 
 # Install Go
 RUN ARCH=$(dpkg --print-architecture) && echo "Architecture: ${ARCH}" && \
@@ -25,19 +28,21 @@ RUN ARCH=$(dpkg --print-architecture) && echo "Architecture: ${ARCH}" && \
 ENV PATH=$PATH:/usr/local/go/bin
 
 # Install Foundry
-RUN curl -L https://foundry.paradigm.xyz | bash && \
-    export PATH="$HOME/.foundry/bin:$PATH" && \
-    foundryup
+RUN curl -L https://foundry.paradigm.xyz | bash
+RUN $HOME/.foundry/bin/foundryup
+RUN ls $HOME/.foundry/bin
+RUN mv /root/.foundry/bin/forge /bin/forge
 
 # Define work directory
 WORKDIR /app
 
-# Copy the clone script
-COPY clone-repos.sh /clone-repos.sh
-RUN chmod +x /clone-repos.sh
+# Copy the scripts
+COPY clone-repos.sh /app/clone-repos.sh
+COPY prepare.sh /prepare.sh
 
-# Set the startup script as the entry point
-ENTRYPOINT ["/clone-repos.sh"]
+# Set permissions
+RUN chmod +x /app/clone-repos.sh
+RUN chmod +x /prepare.sh
 
-# Keep the container running
-CMD tail -f /dev/null
+# Set the clone-repos.sh script as the entry point
+ENTRYPOINT ["/prepare.sh"]

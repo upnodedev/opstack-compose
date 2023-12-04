@@ -1,0 +1,8 @@
+# Use Ubuntu as the base image
+FROM ubuntu:22.04
+
+# Set environment variables to non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Define work directory
+WORKDIR /app
