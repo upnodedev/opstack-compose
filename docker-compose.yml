@@ -8,6 +8,9 @@ services:
     volumes:
       - ./data/optimism:/app/data/optimism
       - ./data/op-geth:/app/data/op-geth
+      # getting-started needs to be changed to $DEPLOYMENT_CONTEXT
+      # - ./data/deploy-config.json:/app/data/optimism/packages/contracts-bedrock/deploy-config/getting-started.json
+      - ./data/deployments:/app/data/deployments
     env_file: .env
 
   op-geth:
