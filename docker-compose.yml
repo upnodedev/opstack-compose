@@ -45,6 +45,11 @@ services:
     env_file: .env
     ports:
       - "8547:8547"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8547 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
   op-batcher:
     build:
@@ -55,8 +60,10 @@ services:
     volumes:
       - ./data/optimism:/app/data/optimism
     depends_on:
-      - op-geth
-      - op-node
+      op-geth:
+        condition: service_healthy
+      op-node:
+        condition: service_healthy
     env_file: .env
     ports:
       - "8548:8548"
@@ -70,9 +77,10 @@ services:
     volumes:
       - ./data/optimism:/app/data/optimism
     depends_on:
-      - op-geth
-      - op-node
-      # - op-batcher
+      op-geth:
+        condition: service_healthy
+      op-node:
+        condition: service_healthy
     env_file: .env
     ports:
       - "8560:8560"
