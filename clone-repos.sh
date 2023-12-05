@@ -26,4 +26,7 @@ clone_repo() {
 clone_repo https://github.com/ethereum-optimism/optimism.git develop /app/data/optimism
 clone_repo https://github.com/ethereum-optimism/op-geth.git optimism /app/data/op-geth
 
+git config --global --add safe.directory /app/data/optimism
+git config --global --add safe.directory /app/data/op-geth
+
 exec "$@"

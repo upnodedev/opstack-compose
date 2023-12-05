@@ -9,7 +9,7 @@ ENV GO_VERSION 1.21.2
 
 # Update and install basic dependencies
 RUN apt-get update && \
-    apt-get install -y git make jq curl wget direnv build-essential pkg-config libssl-dev openssl ca-certificates && \
+    apt-get install -y git make jq curl wget build-essential pkg-config libssl-dev openssl ca-certificates && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -29,9 +29,8 @@ ENV PATH=$PATH:/usr/local/go/bin
 
 # Install Foundry
 RUN curl -L https://foundry.paradigm.xyz | bash
-RUN $HOME/.foundry/bin/foundryup
-RUN ls $HOME/.foundry/bin
-RUN mv /root/.foundry/bin/forge /bin/forge
+ENV PATH="/root/.foundry/bin:${PATH}"
+RUN foundryup
 
 # Define work directory
 WORKDIR /app

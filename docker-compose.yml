@@ -1,3 +1,5 @@
+version: '3.9'
+
 services:
   force-clone:
     build:
@@ -7,23 +9,19 @@ services:
       - ./data/optimism:/app/data/optimism
       - ./data/op-geth:/app/data/op-geth
     env_file: .env
-    healthcheck:
-      test: ["CMD-SHELL", "test -f /app/prepare_complete.flag"]
-      interval: 1m
-      timeout: 30s
-      retries: 10
-      start_period: 30s
 
   op-geth:
     build:
       context: .
       dockerfile: Dockerfile.services
+      args:
+        ENTRYPOINT_SCRIPT: op-geth.sh
     volumes:
-      - ./data/op-geth:/app/op-geth
-    entrypoint: ./entrypoints/op-geth.sh
+      - ./data/op-geth:/app/data/op-geth
     depends_on:
       force-clone:
-        condition: service_healthy
+        condition: service_completed_successfully
+    env_file: .env
     ports:
       - "8545:8545"
       - "8551:8551"
@@ -32,11 +30,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.services
+      args:
+        ENTRYPOINT_SCRIPT: op-node.sh
     volumes:
-      - ./data/op-node:/app/op-node
-    entrypoint: ./entrypoints/op-node.sh
+      - ./data/optimism:/app/data/optimism
     depends_on:
       - op-geth
+    env_file: .env
     ports:
       - "8547:8547"
 
@@ -44,12 +44,14 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.services
+      args:
+        ENTRYPOINT_SCRIPT: op-batcher.sh
     volumes:
-      - ./data/op-batcher:/app/op-batcher
-    entrypoint: ./entrypoints/op-batcher.sh
+      - ./data/optimism:/app/data/optimism
     depends_on:
       - op-geth
       - op-node
+    env_file: .env
     ports:
       - "8548:8548"
 
@@ -57,12 +59,14 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.services
+      args:
+        ENTRYPOINT_SCRIPT: op-proposer.sh
     volumes:
-      - ./data/op-proposer:/app/op-proposer
-    entrypoint: ./entrypoints/op-proposer.sh
+      - ./data/optimism:/app/data/optimism
     depends_on:
       - op-geth
       - op-node
-      - op-batcher
+      # - op-batcher
+    env_file: .env
     ports:
       - "8560:8560"

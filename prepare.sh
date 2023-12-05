@@ -1,23 +1,19 @@
 #!/bin/bash
 
-rm -f /app/prepare_complete.flag
-
 # Ensure script stops on first error
 set -e
 
 # Clone the repositories
 /app/clone-repos.sh
 
+# Setting an environment variable for deployment
+export IMPL_SALT=$(openssl rand -hex 32)
+
 # Build the Optimism Monorepo
 cd /app/data/optimism
 pnpm install
 make op-node op-batcher op-proposer
 pnpm build
-
-# Copy binary to separate shared folder
-cp -r /app/data/optimism/op-node/bin /app/op-node/bin
-cp -r /app/data/optimism/op-batcher/bin /app/op-batcher/bin
-cp -r /app/data/optimism/op-proposer/bin /app/op-proposer/bin
 
 # Build op-geth
 cd /app/data/op-geth
@@ -47,7 +43,5 @@ cp jwt.txt /app/data/op-geth
 cd /app/data/op-geth
 mkdir datadir
 build/bin/geth init --datadir=datadir genesis.json
-
-touch /app/prepare_complete.flag
 
 exec "$@"
