@@ -33,7 +33,7 @@ services:
       context: .
       dockerfile: Dockerfile.services
     volumes:
-      - ./data/optimism/op-node:/app/op-node
+      - ./data/op-node:/app/op-node
     entrypoint: ./entrypoints/op-node.sh
     depends_on:
       - op-geth
@@ -45,7 +45,7 @@ services:
       context: .
       dockerfile: Dockerfile.services
     volumes:
-      - ./data/optimism/op-batcher:/app/op-batcher
+      - ./data/op-batcher:/app/op-batcher
     entrypoint: ./entrypoints/op-batcher.sh
     depends_on:
       - op-geth
@@ -58,7 +58,7 @@ services:
       context: .
       dockerfile: Dockerfile.services
     volumes:
-      - ./data/optimism/op-proposer:/app/op-proposer
+      - ./data/op-proposer:/app/op-proposer
     entrypoint: ./entrypoints/op-proposer.sh
     depends_on:
       - op-geth

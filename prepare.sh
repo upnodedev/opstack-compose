@@ -14,6 +14,11 @@ pnpm install
 make op-node op-batcher op-proposer
 pnpm build
 
+# Copy binary to separate shared folder
+cp -r /app/data/optimism/op-node/bin /app/op-node/bin
+cp -r /app/data/optimism/op-batcher/bin /app/op-batcher/bin
+cp -r /app/data/optimism/op-proposer/bin /app/op-proposer/bin
+
 # Build op-geth
 cd /app/data/op-geth
 make geth
