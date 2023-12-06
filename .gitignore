@@ -1,2 +1,4 @@
-data
+data/optimism
+data/op-geth
+data/deployments
 .env
