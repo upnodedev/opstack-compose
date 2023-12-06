@@ -22,6 +22,7 @@ make geth
 # Configure network
 cd /app/data/optimism/packages/contracts-bedrock
 ./scripts/getting-started/config.sh
+cp -f ./deploy-config/getting-started.json /app/data/deploy-config/getting-started.json
 
 # Deploy the L1 contracts
 forge script scripts/Deploy.s.sol:Deploy --private-key $GS_ADMIN_PRIVATE_KEY --broadcast --rpc-url $L1_RPC_URL
