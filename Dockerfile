@@ -9,7 +9,7 @@ ENV GO_VERSION 1.21.2
 
 # Update and install basic dependencies
 RUN apt-get update && \
-    apt-get install -y git make jq curl wget build-essential pkg-config libssl-dev openssl ca-certificates && \
+    apt-get install -y git make curl wget build-essential pkg-config libssl-dev openssl ca-certificates && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 

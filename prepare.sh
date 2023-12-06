@@ -27,6 +27,7 @@ cd /app/data/optimism/packages/contracts-bedrock
 forge script scripts/Deploy.s.sol:Deploy --private-key $GS_ADMIN_PRIVATE_KEY --broadcast --rpc-url $L1_RPC_URL
 forge script scripts/Deploy.s.sol:Deploy --sig 'sync()' --rpc-url $L1_RPC_URL
 
+rm -rf /app/data/deployments/getting-started
 cp -r /app/data/optimism/packages/contracts-bedrock/deployments/getting-started /app/data/deployments
 
 # Generate the L2 config files
