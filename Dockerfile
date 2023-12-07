@@ -38,7 +38,7 @@ WORKDIR /app
 # Copy the scripts
 COPY clone-repos.sh /app/clone-repos.sh
 COPY prepare.sh /prepare.sh
-COPY deploy-config.json /app/deploy-config.json
+COPY deploy-config.jso[n] /app/deploy-config.json
 
 # Set permissions
 RUN chmod +x /app/clone-repos.sh
