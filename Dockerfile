@@ -38,10 +38,15 @@ WORKDIR /app
 # Copy the scripts
 COPY clone-repos.sh /app/clone-repos.sh
 COPY prepare.sh /prepare.sh
+COPY update-config.sh /app/update-config.sh
 
 # Set permissions
 RUN chmod +x /app/clone-repos.sh
 RUN chmod +x /prepare.sh
+RUN chmod +x /app/update-config.sh
+
+# Copy the custom JSON configuration file
+COPY deploy-custom-config.json /app/deploy-custom-config.json
 
 # Set the clone-repos.sh script as the entry point
 ENTRYPOINT ["/prepare.sh"]

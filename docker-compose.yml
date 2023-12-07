@@ -5,12 +5,11 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    restart: unless-stopped
     volumes:
       - ./data/optimism:/app/data/optimism
       - ./data/op-geth:/app/data/op-geth
       - ./data/deployments:/app/data/deployments
-      - ./data/deploy-config.json:/app/data/deploy-config/getting-started.json
+      - ./data/configurations:/app/data/configurations
     env_file: .env
 
   op-geth:
