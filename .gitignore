@@ -1,7 +1,4 @@
-optimism
-op-geth
-datadir
-deployments
-data
-checkpoints
+data/optimism
+data/op-geth
+data/deployments
 .env

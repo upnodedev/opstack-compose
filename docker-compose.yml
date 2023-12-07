@@ -1,72 +1,88 @@
-version: '3'
-
-# Note: L1 node must be synced, otherwise you may need to do redeploy after it has been synced
-# Note: Required optimism repo version: v1.1.4
+version: '3.9'
 
 services:
-  contract-deployer:
+  force-clone:
     build:
-      context: ./contract-deployer
+      context: .
       dockerfile: Dockerfile
-    env_file: .env
-    entrypoint: ./entrypoints/contract-deployer.sh
     volumes:
-      - ./checkpoints:/var/upnode/checkpoints
-      - ./optimism:/var/upnode/optimism
-      - ./data:/var/upnode/data
+      - ./data/optimism:/app/data/optimism
+      - ./data/op-geth:/app/data/op-geth
+      - ./data/deployments:/app/data/deployments
+      - ./data/deploy-config.json:/app/data/deploy-config/getting-started.json
+    env_file: .env
 
   op-geth:
     build:
-      context: ./op-geth
-      dockerfile: Dockerfile
-    env_file: .env
-    entrypoint: ./entrypoints/op-geth.sh
+      context: .
+      dockerfile: Dockerfile.services
+      args:
+        ENTRYPOINT_SCRIPT: op-geth.sh
     volumes:
-      - ./checkpoints:/var/upnode/checkpoints
-      - ./jwtsecret:/var/upnode/jwtsecret
-      - ./data:/var/upnode/data
-      - ./datadir:/var/upnode/datadir
-    expose:
-      - 8545
-      - 8551
+      - ./data/op-geth:/app/data/op-geth
     depends_on:
-      - contract-deployer
+      force-clone:
+        condition: service_completed_successfully
+    env_file: .env
+    ports:
+      - "8545:8545"
+      - "8551:8551"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8545 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
   op-node:
     build:
-      context: ./optimism/op-node
-      dockerfile: Dockerfile
-    env_file: .env
-    entrypoint: ./entrypoints/op-node.sh
+      context: .
+      dockerfile: Dockerfile.services
+      args:
+        ENTRYPOINT_SCRIPT: op-node.sh
     volumes:
-      - ./checkpoints:/var/upnode/checkpoints
-      - ./jwtsecret:/var/upnode/jwtsecret
+      - ./data/optimism:/app/data/optimism
     depends_on:
-      - op-geth
+      op-geth:
+        condition: service_healthy
+    env_file: .env
+    ports:
+      - "8547:8547"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8547 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
   op-batcher:
     build:
-      context: ./optimism/op-batcher
-      dockerfile: Dockerfile
-    env_file: .env
-    entrypoint: ./entrypoints/op-batcher.sh
+      context: .
+      dockerfile: Dockerfile.services
+      args:
+        ENTRYPOINT_SCRIPT: op-batcher.sh
     volumes:
-      - ./checkpoints:/var/upnode/checkpoints
+      - ./data/optimism:/app/data/optimism
     depends_on:
-      - op-geth
-      - op-node
+      op-geth:
+        condition: service_healthy
+      op-node:
+        condition: service_healthy
+    env_file: .env
+    ports:
+      - "8548:8548"
 
   op-proposer:
     build:
-      context: ./optimism/op-proposer
-      dockerfile: Dockerfile
-    env_file:
-      - .env
-      - ./data/deployments.env
-    entrypoint: ./entrypoints/op-proposer.sh
+      context: .
+      dockerfile: Dockerfile.services
+      args:
+        ENTRYPOINT_SCRIPT: op-proposer.sh
     volumes:
-      - ./checkpoints:/var/upnode/checkpoints
+      - ./data/optimism:/app/data/optimism
     depends_on:
-      - op-geth
-      - op-node
-      - op-batcher
+      op-geth:
+        condition: service_healthy
+      op-node:
+        condition: service_healthy
+    env_file: .env
+    ports:
+      - "8560:8560"
