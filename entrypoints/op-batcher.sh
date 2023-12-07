@@ -14,4 +14,5 @@ cd /app/data/optimism/op-batcher
   --rpc.enable-admin \
   --max-channel-duration=1 \
   --l1-eth-rpc=$L1_RPC_URL \
-  --private-key=$GS_BATCHER_PRIVATE_KEY
+  --private-key=$GS_BATCHER_PRIVATE_KEY \
+  $OP_BATCHER_EXTRA_FLAGS

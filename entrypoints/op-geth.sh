@@ -22,4 +22,5 @@ cd /app/data/op-geth
   --authrpc.addr=0.0.0.0 \
   --authrpc.port=8551 \
   --authrpc.jwtsecret=./jwt.txt \
-  --rollup.disabletxpoolgossip=true
+  --rollup.disabletxpoolgossip=true \
+  $OP_GETH_EXTRA_FLAGS
