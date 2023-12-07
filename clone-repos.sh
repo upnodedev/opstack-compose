@@ -22,9 +22,16 @@ clone_repo() {
   echo "Cloning complete"
 }
 
+# Use environment variables if set, otherwise default to the official repositories
+OPTIMISM_REPO=${OPTIMISM_REPO_URL:-https://github.com/ethereum-optimism/optimism.git}
+OPTIMISM_BRANCH=${OPTIMISM_BRANCH_OR_COMMIT:-develop}
+
+OP_GETH_REPO=${OP_GETH_REPO_URL:-https://github.com/ethereum-optimism/op-geth.git}
+OP_GETH_BRANCH=${OP_GETH_BRANCH_OR_COMMIT:-optimism}
+
 # Cloning repositories
-clone_repo https://github.com/ethereum-optimism/optimism.git develop /app/data/optimism
-clone_repo https://github.com/ethereum-optimism/op-geth.git optimism /app/data/op-geth
+clone_repo "$OPTIMISM_REPO" "$OPTIMISM_BRANCH" /app/data/optimism
+clone_repo "$OP_GETH_REPO" "$OP_GETH_BRANCH" /app/data/op-geth
 
 git config --global --add safe.directory '*'
 
