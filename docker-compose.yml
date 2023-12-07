@@ -82,6 +82,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./data/optimism:/app/data/optimism
+      - ./data/deployments:/app/data/deployments
     depends_on:
       op-geth:
         condition: service_healthy
