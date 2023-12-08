@@ -10,7 +10,15 @@ services:
       - ./data/op-geth:/app/data/op-geth
       - ./data/deployments:/app/data/deployments
       - ./data/configurations:/app/data/configurations
+      - ./data/bin:/app/data/bin
+      - ./data/datadir:/app/data/datadir
     env_file: .env
+    environment:
+      - CONFIG_PATH=/app/data/configurations
+      - DEPLOYMENT_DIR=/app/data/deployments/${DEPLOYMENT_CONTEXT}
+      - OPTIMISM_DIR=/app/data/optimism
+      - OP_GETH_DIR=/app/data/op-geth
+      - BIN_DIR=/app/data/bin
 
   op-geth:
     build:
@@ -20,11 +28,17 @@ services:
         ENTRYPOINT_SCRIPT: op-geth.sh
     restart: unless-stopped
     volumes:
-      - ./data/op-geth:/app/data/op-geth
+      - ./data/bin:/app/data/bin
+      - ./data/datadir:/app/data/datadir
+      - ./data/configurations:/app/data/configurations
     depends_on:
       force-clone:
         condition: service_completed_successfully
     env_file: .env
+    environment:
+      - CONFIG_PATH=/app/data/configurations
+      - DATA_DIR=/app/data/datadir
+      - BIN_DIR=/app/data/bin
     ports:
       - "8545:8545"
       - "8551:8551"
@@ -42,11 +56,15 @@ services:
         ENTRYPOINT_SCRIPT: op-node.sh
     restart: unless-stopped
     volumes:
-      - ./data/optimism:/app/data/optimism
+      - ./data/bin:/app/data/bin
+      - ./data/configurations:/app/data/configurations
     depends_on:
       op-geth:
         condition: service_healthy
     env_file: .env
+    environment:
+      - CONFIG_PATH=/app/data/configurations
+      - BIN_DIR=/app/data/bin
     ports:
       - "8547:8547"
     healthcheck:
@@ -63,13 +81,15 @@ services:
         ENTRYPOINT_SCRIPT: op-batcher.sh
     restart: unless-stopped
     volumes:
-      - ./data/optimism:/app/data/optimism
+      - ./data/bin:/app/data/bin
     depends_on:
       op-geth:
         condition: service_healthy
       op-node:
         condition: service_healthy
     env_file: .env
+    environment:
+      - BIN_DIR=/app/data/bin
     ports:
       - "8548:8548"
 
@@ -81,7 +101,7 @@ services:
         ENTRYPOINT_SCRIPT: op-proposer.sh
     restart: unless-stopped
     volumes:
-      - ./data/optimism:/app/data/optimism
+      - ./data/bin:/app/data/bin
       - ./data/deployments:/app/data/deployments
     depends_on:
       op-geth:
@@ -89,5 +109,8 @@ services:
       op-node:
         condition: service_healthy
     env_file: .env
+    environment:
+      - DEPLOYMENT_DIR=/app/data/deployments/${DEPLOYMENT_CONTEXT}
+      - BIN_DIR=/app/data/bin
     ports:
       - "8560:8560"

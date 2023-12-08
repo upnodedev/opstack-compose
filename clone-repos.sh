@@ -30,8 +30,8 @@ OP_GETH_REPO=${OP_GETH_REPO_URL:-https://github.com/ethereum-optimism/op-geth.gi
 OP_GETH_BRANCH=${OP_GETH_BRANCH_OR_COMMIT:-optimism}
 
 # Cloning repositories
-clone_repo "$OPTIMISM_REPO" "$OPTIMISM_BRANCH" /app/data/optimism
-clone_repo "$OP_GETH_REPO" "$OP_GETH_BRANCH" /app/data/op-geth
+clone_repo "$OPTIMISM_REPO" "$OPTIMISM_BRANCH" $OPTIMISM_DIR
+clone_repo "$OP_GETH_REPO" "$OP_GETH_BRANCH" $OP_GETH_DIR
 
 git config --global --add safe.directory '*'
 

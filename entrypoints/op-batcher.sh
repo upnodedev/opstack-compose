@@ -1,7 +1,6 @@
 #!/bin/sh
 
-cd /app/data/optimism/op-batcher
-./bin/op-batcher \
+$BIN_DIR/op-batcher \
   --l2-eth-rpc=http://op-geth:8545 \
   --rollup-rpc=http://op-node:8547 \
   --poll-interval=1s \

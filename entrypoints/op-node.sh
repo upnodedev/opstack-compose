@@ -1,13 +1,12 @@
 #!/bin/sh
 
-cd /app/data/optimism/op-node
-./bin/op-node \
+$BIN_DIR/op-node \
   --l2=http://op-geth:8551 \
-  --l2.jwt-secret=./jwt.txt \
+  --l2.jwt-secret=$CONFIG_PATH/jwt.txt \
   --sequencer.enabled \
   --sequencer.l1-confs=5 \
   --verifier.l1-confs=4 \
-  --rollup.config=./rollup.json \
+  --rollup.config=$CONFIG_PATH/rollup.json \
   --rpc.addr=0.0.0.0 \
   --rpc.port=8547 \
   --p2p.disable \

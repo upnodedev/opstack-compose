@@ -1,8 +1,13 @@
 #!/bin/sh
 
-cd /app/data/op-geth
-./build/bin/geth \
-  --datadir ./datadir \
+# Initialize op-geth if datadir is empty
+if [ -d "$DATA_DIR" ] && [ -z "$(ls -A $DATA_DIR)" ]; then
+  echo "Initializing op-geth as $DATA_DIR is empty..."
+  $BIN_DIR/geth init --datadir=$DATA_DIR $CONFIG_PATH/genesis.json
+fi
+
+$BIN_DIR/geth \
+  --datadir $DATA_DIR \
   --http \
   --http.corsdomain="*" \
   --http.vhosts="*" \
@@ -21,6 +26,6 @@ cd /app/data/op-geth
   --authrpc.vhosts="*" \
   --authrpc.addr=0.0.0.0 \
   --authrpc.port=8551 \
-  --authrpc.jwtsecret=./jwt.txt \
+  --authrpc.jwtsecret=$CONFIG_PATH/jwt.txt \
   --rollup.disabletxpoolgossip=true \
   $OP_GETH_EXTRA_FLAGS

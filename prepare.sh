@@ -3,11 +3,50 @@
 # Ensure script stops on first error
 set -e
 
-# Clone the repositories
-/app/clone-repos.sh
+# Clone repositories if necessary
+if [ ! -d "$OPTIMISM_DIR/.git" ] || [ ! -d "$OP_GETH_DIR/.git" ]; then
+  /app/clone-repos.sh
+fi
 
-# Setting an environment variable for deployment
-export IMPL_SALT=$(openssl rand -hex 32)
+# Check and build binaries if at least one doesn't exist
+if [ ! -f "$BIN_DIR/op-node" ] || [ ! -f "$BIN_DIR/op-batcher" ] || [ ! -f "$BIN_DIR/op-proposer" ] || [ ! -f "$BIN_DIR/geth" ]; then
+  # Clear and clone a repositories
+  /app/clone-repos.sh
+
+  # Build op-node, op-batcher and op-proposer
+  cd $OPTIMISM_DIR
+  pnpm install
+  make op-node op-batcher op-proposer
+  pnpm build
+
+  # Copy binaries to the bin volume
+  cp -f $OPTIMISM_DIR/op-node/bin/op-node $BIN_DIR/
+  cp -f $OPTIMISM_DIR/op-batcher/bin/op-batcher $BIN_DIR/
+  cp -f $OPTIMISM_DIR/op-proposer/bin/op-proposer $BIN_DIR/
+
+  # Build op-geth
+  cd $OP_GETH_DIR
+  make geth
+
+  # Copy geth binary to the bin volume
+  cp ./build/bin/geth $BIN_DIR/
+fi
+
+# Check if all required components exist
+if [ -f "$CONFIG_PATH/deploy-config.json" ] && [ -f "$CONFIG_PATH/jwt.txt" ] && [ -f "$CONFIG_PATH/genesis.json" ] && [ -f "$CONFIG_PATH/rollup.json" ] && [ -d "$DEPLOYMENT_DIR" ]; then
+  echo "All required components are present, skipping script."
+  exec "$@"
+  exit 0
+fi
+
+# Check if at least one required component exists but not all
+if [ -f "$CONFIG_PATH/deploy-config.json" ] || [ -f "$CONFIG_PATH/jwt.txt" ] || [ -f "$CONFIG_PATH/genesis.json" ] || [ -f "$CONFIG_PATH/rollup.json" ] || [ -d "$DEPLOYMENT_DIR" ]; then
+  echo "Partial components are present, but not all. Exiting script."
+  exit 1
+fi
+
+# If no components exist, continue with the script
+echo "No required components are present, continuing script execution."
 
 # Check if both L1_BLOCKHASH and L1_TIMESTAMP are set or unset
 if [ -n "$L1_BLOCKHASH" ] && [ -z "$L1_TIMESTAMP" ] || [ -z "$L1_BLOCKHASH" ] && [ -n "$L1_TIMESTAMP" ]; then
@@ -21,23 +60,13 @@ elif [ -z "$L1_BLOCKHASH" ] && [ -z "$L1_TIMESTAMP" ]; then
   export L1_BLOCKHASH=$(echo "$block" | awk '/hash/ { print $2 }')
 fi
 
-# Build the Optimism Monorepo
-cd /app/data/optimism
-pnpm install
-make op-node op-batcher op-proposer
-pnpm build
-
-# Build op-geth
-cd /app/data/op-geth
-make geth
-
-cd /app/data/optimism/packages/contracts-bedrock
+cd $OPTIMISM_DIR/packages/contracts-bedrock
 
 # Check if deploy-config.json exists
 if [ -f "/app/deploy-config.json" ]; then
   # Populate deploy-config.json with env variables
   echo "Populating deploy-config.json with env variables..."
-  # NOTE: scripts/Deploy.s.sol:Deploy expects the deploy-config.json file to be in ./deploy-config
+  # NOTE: scripts/Deploy.s.sol:Deploy expects the deploy-config.json file to be in $OPTIMISM_DIR/packages/contracts-bedrock/deploy-config/
   envsubst < /app/deploy-config.json > /app/temp-deploy-config.json && mv /app/temp-deploy-config.json ./deploy-config/$DEPLOYMENT_CONTEXT.json
 else
   # If deploy-config.json does not exist, use config.sh to generate it
@@ -45,34 +74,28 @@ else
   ./scripts/getting-started/config.sh
 fi
 
-cp -f ./deploy-config/$DEPLOYMENT_CONTEXT.json /app/data/configurations/deploy-config.json
+# Copy deploy-config.json to the configurations volume
+cp ./deploy-config/$DEPLOYMENT_CONTEXT.json $CONFIG_PATH/deploy-config.json
+
+# Setting an environment variable for deployment
+export IMPL_SALT=$(openssl rand -hex 32)
 
 # Deploy the L1 contracts
 forge script scripts/Deploy.s.sol:Deploy --private-key $GS_ADMIN_PRIVATE_KEY --broadcast --rpc-url $L1_RPC_URL
 forge script scripts/Deploy.s.sol:Deploy --sig 'sync()' --rpc-url $L1_RPC_URL
 
-rm -rf /app/data/deployments/$DEPLOYMENT_CONTEXT
-cp -r /app/data/optimism/packages/contracts-bedrock/deployments/$DEPLOYMENT_CONTEXT /app/data/deployments
+cp -r $OPTIMISM_DIR/packages/contracts-bedrock/deployments/$DEPLOYMENT_CONTEXT /app/data/deployments/
 
 # Generate the L2 config files
-cd /app/data/optimism/op-node
+cd $OPTIMISM_DIR/op-node
 go run cmd/main.go genesis l2 \
-  --deploy-config /app/data/configurations/deploy-config.json \
-  --deployment-dir /app/data/deployments/$DEPLOYMENT_CONTEXT/ \
+  --deploy-config $CONFIG_PATH/deploy-config.json \
+  --deployment-dir $DEPLOYMENT_DIR/ \
   --outfile.l2 genesis.json \
   --outfile.rollup rollup.json \
   --l1-rpc $L1_RPC_URL
-openssl rand -hex 32 > jwt.txt
-cp genesis.json /app/data/op-geth
-cp jwt.txt /app/data/op-geth
-
-# Copy genesis.json and rollup.json to /app/data/configurations/
-cp genesis.json /app/data/configurations/
-cp rollup.json /app/data/configurations/
-
-# Initialize op-geth
-cd /app/data/op-geth
-mkdir datadir
-build/bin/geth init --datadir=datadir genesis.json
+openssl rand -hex 32 > $CONFIG_PATH/jwt.txt
+cp genesis.json $CONFIG_PATH/
+cp rollup.json $CONFIG_PATH/
 
 exec "$@"
