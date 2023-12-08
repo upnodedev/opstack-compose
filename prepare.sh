@@ -33,7 +33,6 @@ make geth
 # Check if deploy-config.json exists
 if [ -f "/app/deploy-config.json" ]; then
   # Populate deploy-config.json with env variables
-  #! FIX: if the variable should be uint64 and in json "$L1_TIMESTAMP" -> it will become a string -> error
   envsubst < /app/deploy-config.json > /app/temp-deploy-config.json && mv /app/temp-deploy-config.json /app/data/configurations/deploy-config.json
 else
   # If deploy-config.json does not exist, use config.sh to generate it
