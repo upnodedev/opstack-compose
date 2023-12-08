@@ -19,7 +19,7 @@
 
   "l2OutputOracleSubmissionInterval": 120,
   "l2OutputOracleStartingBlockNumber": 0,
-  "l2OutputOracleStartingTimestamp": "$L1_TIMESTAMP",
+  "l2OutputOracleStartingTimestamp": $L1_TIMESTAMP,
 
   "l2OutputOracleProposer": "$GS_PROPOSER_ADDRESS",
   "l2OutputOracleChallenger": "$GS_ADMIN_ADDRESS",
