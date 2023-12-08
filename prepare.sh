@@ -15,6 +15,7 @@ if [ -n "$L1_BLOCKHASH" ] && [ -z "$L1_TIMESTAMP" ] || [ -z "$L1_BLOCKHASH" ] &&
   exit 1
 elif [ -z "$L1_BLOCKHASH" ] && [ -z "$L1_TIMESTAMP" ]; then
   # Fetch block details if both variables are unset
+  echo "Fetching block details from L1_RPC_URL..."
   block=$(cast block finalized --rpc-url $L1_RPC_URL)
   export L1_TIMESTAMP=$(echo "$block" | awk '/timestamp/ { print $2 }')
   export L1_BLOCKHASH=$(echo "$block" | awk '/hash/ { print $2 }')
@@ -30,16 +31,21 @@ pnpm build
 cd /app/data/op-geth
 make geth
 
+cd /app/data/optimism/packages/contracts-bedrock
+
 # Check if deploy-config.json exists
 if [ -f "/app/deploy-config.json" ]; then
   # Populate deploy-config.json with env variables
-  envsubst < /app/deploy-config.json > /app/temp-deploy-config.json && mv /app/temp-deploy-config.json /app/data/configurations/deploy-config.json
+  echo "Populating deploy-config.json with env variables..."
+  # NOTE: scripts/Deploy.s.sol:Deploy expects the deploy-config.json file to be in ./deploy-config
+  envsubst < /app/deploy-config.json > /app/temp-deploy-config.json && mv /app/temp-deploy-config.json ./deploy-config/$DEPLOYMENT_CONTEXT.json
 else
   # If deploy-config.json does not exist, use config.sh to generate it
-  cd /app/data/optimism/packages/contracts-bedrock
+  echo "Generating deploy-config.json..."
   ./scripts/getting-started/config.sh
-  cp -f ./deploy-config/$DEPLOYMENT_CONTEXT.json /app/data/configurations/deploy-config.json
 fi
+
+cp -f ./deploy-config/$DEPLOYMENT_CONTEXT.json /app/data/configurations/deploy-config.json
 
 # Deploy the L1 contracts
 forge script scripts/Deploy.s.sol:Deploy --private-key $GS_ADMIN_PRIVATE_KEY --broadcast --rpc-url $L1_RPC_URL
