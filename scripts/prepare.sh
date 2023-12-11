@@ -71,6 +71,12 @@ derive_and_check "SEQUENCER_PRIVATE_KEY" "GS_SEQUENCER_ADDRESS"
 
 cd $OPTIMISM_DIR/packages/contracts-bedrock
 
+# Check if the file ./deploy-config/$DEPLOYMENT_CONTEXT.json exists and the file "/app/deploy-config.json" does not exist
+if [ -f "./deploy-config/$DEPLOYMENT_CONTEXT.json" ] && [ ! -f "/app/deploy-config.json" ]; then
+  # If the condition is true, copy the file ./deploy-config/$DEPLOYMENT_CONTEXT.json to /app/deploy-config.json
+  cp ./deploy-config/$DEPLOYMENT_CONTEXT.json /app/deploy-config.json
+fi
+
 # Check if deploy-config.json exists
 if [ -f "/app/deploy-config.json" ]; then
   # Populate deploy-config.json with env variables
