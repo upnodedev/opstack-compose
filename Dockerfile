@@ -36,14 +36,14 @@ RUN foundryup
 WORKDIR /app
 
 # Copy the scripts
-COPY clone-repos.sh /app/clone-repos.sh
-COPY prepare.sh /prepare.sh
+COPY scripts/clone-repos.sh /app/clone-repos.sh
+COPY scripts/utils.sh /app/utils.sh
+COPY scripts/prepare.sh /app/prepare.sh
 COPY deploy-config.jso[n] /app/deploy-config.json
-COPY utils.sh /app/utils.sh
 
 # Set permissions
 RUN chmod +x /app/clone-repos.sh
-RUN chmod +x /prepare.sh
+RUN chmod +x /app/prepare.sh
 
 # Set the clone-repos.sh script as the entry point
-ENTRYPOINT ["/prepare.sh"]
+ENTRYPOINT ["/app/prepare.sh"]
