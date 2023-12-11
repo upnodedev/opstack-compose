@@ -55,7 +55,7 @@ if [ -n "$L1_BLOCKHASH" ] && [ -z "$L1_TIMESTAMP" ] || [ -z "$L1_BLOCKHASH" ] &&
 elif [ -z "$L1_BLOCKHASH" ] && [ -z "$L1_TIMESTAMP" ]; then
   # Fetch block details if both variables are unset
   echo "Fetching block details from L1_RPC_URL..."
-  block=$(cast block finalized --rpc-url $L1_RPC_URL)
+  block=$(cast block finalized --rpc-url "$L1_RPC_URL")
   export L1_TIMESTAMP=$(echo "$block" | awk '/timestamp/ { print $2 }')
   export L1_BLOCKHASH=$(echo "$block" | awk '/hash/ { print $2 }')
 fi
@@ -64,10 +64,10 @@ fi
 source /app/utils.sh
 
 # Derive addresses from private keys and check for conflicts
-derive_and_check "ADMIN_PRIVATE_KEY" "ADMIN_ADDRESS"
-derive_and_check "BATCHER_PRIVATE_KEY" "BATCHER_ADDRESS"
-derive_and_check "PROPOSER_PRIVATE_KEY" "PROPOSER_ADDRESS"
-derive_and_check "SEQUENCER_PRIVATE_KEY" "SEQUENCER_ADDRESS"
+derive_and_check "ADMIN_PRIVATE_KEY" "GS_ADMIN_ADDRESS"
+derive_and_check "BATCHER_PRIVATE_KEY" "GS_BATCHER_ADDRESS"
+derive_and_check "PROPOSER_PRIVATE_KEY" "GS_PROPOSER_ADDRESS"
+derive_and_check "SEQUENCER_PRIVATE_KEY" "GS_SEQUENCER_ADDRESS"
 
 cd $OPTIMISM_DIR/packages/contracts-bedrock
 
@@ -79,7 +79,6 @@ if [ -f "/app/deploy-config.json" ]; then
   envsubst < /app/deploy-config.json > /app/temp-deploy-config.json && mv /app/temp-deploy-config.json ./deploy-config/$DEPLOYMENT_CONTEXT.json
 else
   # If deploy-config.json does not exist, use config.sh to generate it
-  # TODO: will not work because different variable names are used inside the script: GS_xxx
   echo "Generating deploy-config.json..."
   ./scripts/getting-started/config.sh
 fi
