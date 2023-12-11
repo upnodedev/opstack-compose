@@ -11,7 +11,7 @@ $BIN_DIR/op-node \
   --rpc.port=8547 \
   --p2p.disable \
   --rpc.enable-admin \
-  --p2p.sequencer.key=$GS_SEQUENCER_PRIVATE_KEY \
+  --p2p.sequencer.key=$SEQUENCER_PRIVATE_KEY \
   --l1=$L1_RPC_URL \
   --l1.rpckind=$L1_RPC_KIND \
   $OP_NODE_EXTRA_FLAGS

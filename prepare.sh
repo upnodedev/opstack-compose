@@ -60,6 +60,15 @@ elif [ -z "$L1_BLOCKHASH" ] && [ -z "$L1_TIMESTAMP" ]; then
   export L1_BLOCKHASH=$(echo "$block" | awk '/hash/ { print $2 }')
 fi
 
+# Source the utils.sh file
+source /app/utils.sh
+
+# Derive addresses from private keys and check for conflicts
+derive_and_check "ADMIN_PRIVATE_KEY" "ADMIN_ADDRESS"
+derive_and_check "BATCHER_PRIVATE_KEY" "BATCHER_ADDRESS"
+derive_and_check "PROPOSER_PRIVATE_KEY" "PROPOSER_ADDRESS"
+derive_and_check "SEQUENCER_PRIVATE_KEY" "SEQUENCER_ADDRESS"
+
 cd $OPTIMISM_DIR/packages/contracts-bedrock
 
 # Check if deploy-config.json exists
@@ -70,6 +79,7 @@ if [ -f "/app/deploy-config.json" ]; then
   envsubst < /app/deploy-config.json > /app/temp-deploy-config.json && mv /app/temp-deploy-config.json ./deploy-config/$DEPLOYMENT_CONTEXT.json
 else
   # If deploy-config.json does not exist, use config.sh to generate it
+  # TODO: will not work because different variable names are used inside the script: GS_xxx
   echo "Generating deploy-config.json..."
   ./scripts/getting-started/config.sh
 fi
@@ -81,7 +91,7 @@ cp ./deploy-config/$DEPLOYMENT_CONTEXT.json $CONFIG_PATH/deploy-config.json
 export IMPL_SALT=$(openssl rand -hex 32)
 
 # Deploy the L1 contracts
-forge script scripts/Deploy.s.sol:Deploy --private-key $GS_ADMIN_PRIVATE_KEY --broadcast --rpc-url $L1_RPC_URL
+forge script scripts/Deploy.s.sol:Deploy --private-key $DEPLOYER_PRIVATE_KEY --broadcast --rpc-url $L1_RPC_URL
 forge script scripts/Deploy.s.sol:Deploy --sig 'sync()' --rpc-url $L1_RPC_URL
 
 cp -r $OPTIMISM_DIR/packages/contracts-bedrock/deployments/$DEPLOYMENT_CONTEXT /app/data/deployments/
