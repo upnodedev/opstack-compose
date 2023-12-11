@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# Confirm with the user
+read -p "WARNING: This will clean up the data directory. Are you sure you want to proceed? (yes/no) " confirmation
+
+if [ "$confirmation" != "yes" ]; then
+  echo "Cleanup cancelled."
+  exit 1
+fi
+
+# Clean up data directory
+echo "Cleaning up data directory..."
+rm -rf ./data/*
+echo "Cleanup complete."

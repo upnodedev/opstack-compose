@@ -41,7 +41,7 @@ fi
 
 # Check if at least one required component exists but not all
 if [ -f "$CONFIG_PATH/deploy-config.json" ] || [ -f "$CONFIG_PATH/jwt.txt" ] || [ -f "$CONFIG_PATH/genesis.json" ] || [ -f "$CONFIG_PATH/rollup.json" ] || [ -d "$DEPLOYMENT_DIR" ]; then
-  echo "Partial components are present, but not all. Exiting script."
+  echo "Error: Partial components are present, but not all. Exiting script."
   exit 1
 fi
 

@@ -11,9 +11,6 @@ clone_repo() {
     echo "Clearing existing repository in $dest_dir"
     # Remove all contents including hidden files and directories
     rm -rf "$dest_dir"/{,.[!.],..?}*
-  else
-    # Ensure the directory exists
-    mkdir -p "$dest_dir"
   fi
 
   # Clone the repository
