@@ -12,13 +12,9 @@ services:
       - ./data/configurations:/app/data/configurations
       - ./data/bin:/app/data/bin
       - ./data/datadir:/app/data/datadir
-    env_file: .env
-    environment:
-      - CONFIG_PATH=/app/data/configurations
-      - DEPLOYMENT_DIR=/app/data/deployments/${DEPLOYMENT_CONTEXT}
-      - OPTIMISM_DIR=/app/data/optimism
-      - OP_GETH_DIR=/app/data/op-geth
-      - BIN_DIR=/app/data/bin
+    env_file:
+      - .env
+      - paths.env
 
   op-geth:
     build:
@@ -34,11 +30,10 @@ services:
     depends_on:
       force-clone:
         condition: service_completed_successfully
-    env_file: .env
-    environment:
-      - CONFIG_PATH=/app/data/configurations
-      - DATA_DIR=/app/data/datadir
-      - BIN_DIR=/app/data/bin
+    env_file:
+      - .env
+      - paths.env
+      - opgeth.env
     ports:
       - "8545:8545"
       - "8551:8551"
@@ -61,10 +56,10 @@ services:
     depends_on:
       op-geth:
         condition: service_healthy
-    env_file: .env
-    environment:
-      - CONFIG_PATH=/app/data/configurations
-      - BIN_DIR=/app/data/bin
+    env_file:
+      - .env
+      - paths.env
+      - opnode.env
     ports:
       - "8547:8547"
     healthcheck:
@@ -87,9 +82,10 @@ services:
         condition: service_healthy
       op-node:
         condition: service_healthy
-    env_file: .env
-    environment:
-      - BIN_DIR=/app/data/bin
+    env_file:
+      - .env
+      - paths.env
+      - opbatcher.env
     ports:
       - "8548:8548"
 
@@ -108,9 +104,9 @@ services:
         condition: service_healthy
       op-node:
         condition: service_healthy
-    env_file: .env
-    environment:
-      - DEPLOYMENT_DIR=/app/data/deployments/${DEPLOYMENT_CONTEXT}
-      - BIN_DIR=/app/data/bin
+    env_file:
+      - .env
+      - paths.env
+      - opproposer.env
     ports:
       - "8560:8560"

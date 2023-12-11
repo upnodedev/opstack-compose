@@ -1,17 +1,3 @@
 #!/bin/sh
 
-$BIN_DIR/op-batcher \
-  --l2-eth-rpc=http://op-geth:8545 \
-  --rollup-rpc=http://op-node:8547 \
-  --poll-interval=1s \
-  --sub-safety-margin=6 \
-  --num-confirmations=1 \
-  --safe-abort-nonce-too-low-count=3 \
-  --resubmission-timeout=30s \
-  --rpc.addr=0.0.0.0 \
-  --rpc.port=8548 \
-  --rpc.enable-admin \
-  --max-channel-duration=1 \
-  --l1-eth-rpc=$L1_RPC_URL \
-  --private-key=$BATCHER_PRIVATE_KEY \
-  $OP_BATCHER_EXTRA_FLAGS
+$BIN_DIR/op-batcher
