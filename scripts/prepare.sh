@@ -87,6 +87,7 @@ else
   # If deploy-config.json does not exist, use config.sh to generate it
   echo "Generating deploy-config.json..."
   ./scripts/getting-started/config.sh
+  mv ./deploy-config/getting-started.json ./deploy-config/$DEPLOYMENT_CONTEXT.json
 fi
 
 # Copy deploy-config.json to the configurations volume
