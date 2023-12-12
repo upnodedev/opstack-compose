@@ -9,7 +9,7 @@ ENV GO_VERSION 1.21.2
 
 # Update and install basic dependencies
 RUN apt-get update && \
-    apt-get install -y git make jq curl wget gettext-base build-essential pkg-config libssl-dev openssl ca-certificates && \
+    apt-get install -y git make jq curl wget gettext-base build-essential pkg-config libssl-dev openssl ca-certificates unzip && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -31,6 +31,12 @@ ENV PATH=$PATH:/usr/local/go/bin
 RUN curl -L https://foundry.paradigm.xyz | bash
 ENV PATH="/root/.foundry/bin:${PATH}"
 RUN foundryup
+
+# Install AWS CLI version 2
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
+    unzip awscliv2.zip && \
+    ./aws/install && \
+    rm -rf awscliv2.zip ./aws
 
 # Define work directory
 WORKDIR /app
