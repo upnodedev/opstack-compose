@@ -45,6 +45,7 @@ WORKDIR /app
 COPY scripts/clone-repos.sh /app/clone-repos.sh
 COPY scripts/utils.sh /app/utils.sh
 COPY scripts/prepare.sh /app/prepare.sh
+COPY scripts/getting-started-config.sh /app/getting-started-config.sh
 COPY deploy-config.jso[n] /app/deploy-config.json
 
 # Set permissions
