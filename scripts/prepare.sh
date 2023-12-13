@@ -3,15 +3,21 @@
 # Ensure script stops on first error
 set -e
 
+# Initialize a flag to track if cloning was done
+cloned=false
+
 # Clone repositories if necessary
 if [ ! -d "$OPTIMISM_DIR/.git" ] || [ ! -d "$OP_GETH_DIR/.git" ]; then
   /app/clone-repos.sh
+  cloned=true
 fi
 
 # Check and build binaries if at least one doesn't exist
 if [ ! -f "$BIN_DIR/op-node" ] || [ ! -f "$BIN_DIR/op-batcher" ] || [ ! -f "$BIN_DIR/op-proposer" ] || [ ! -f "$BIN_DIR/geth" ]; then
-  # Clear and clone a repositories
-  /app/clone-repos.sh
+  # Clone repositories if not already done
+  if [ "$cloned" = false ]; then
+    /app/clone-repos.sh
+  fi
 
   # Build op-node, op-batcher and op-proposer
   cd $OPTIMISM_DIR
