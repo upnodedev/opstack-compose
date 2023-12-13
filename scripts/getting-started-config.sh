@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 
-# ONLY FOR BACK COMPATIBILITY FOR VERSION <1.4.0
 # This script is used to generate the getting-started.json configuration file
 # used in the Getting Started quickstart guide on the docs site. Avoids the
 # need to have the getting-started.json committed to the repo since it's an
