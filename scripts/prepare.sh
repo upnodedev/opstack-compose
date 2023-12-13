@@ -97,6 +97,7 @@ if [ -f "./deploy-config/$DEPLOYMENT_CONTEXT.json" ] && [ ! -f "/app/deploy-conf
     if [ ! -f "./scripts/getting-started/config.sh" ]; then
       mkdir -p ./scripts/getting-started
       cp /app/getting-started-config.sh ./scripts/getting-started/config.sh
+      chmod +x ./scripts/getting-started/config.sh
     fi
   else
     cp ./deploy-config/$DEPLOYMENT_CONTEXT.json /app/deploy-config.json
