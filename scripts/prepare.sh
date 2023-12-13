@@ -32,6 +32,23 @@ if [ ! -f "$BIN_DIR/op-node" ] || [ ! -f "$BIN_DIR/op-batcher" ] || [ ! -f "$BIN
   cp ./build/bin/geth $BIN_DIR/
 fi
 
+# Check if all or none of the private keys are provided
+if [ -z "$BATCHER_PRIVATE_KEY" ] && [ -z "$PROPOSER_PRIVATE_KEY" ] && [ -z "$SEQUENCER_PRIVATE_KEY" ]; then
+  echo "All private keys are missing, fetching from AWS Secrets Manager..."
+  secrets=$(aws secretsmanager get-secret-value --secret-id $AWS_SECRET_ARN | jq '.SecretString | fromjson')
+
+  BATCHER_PRIVATE_KEY="$(echo "${secrets}" | jq -r '.BATCHER_PRIVATE_KEY')"
+  PROPOSER_PRIVATE_KEY="$(echo "${secrets}" | jq -r '.PROPOSER_PRIVATE_KEY')"
+  SEQUENCER_PRIVATE_KEY="$(echo "${secrets}" | jq -r '.SEQUENCER_PRIVATE_KEY')"
+
+  export BATCHER_PRIVATE_KEY PROPOSER_PRIVATE_KEY SEQUENCER_PRIVATE_KEY
+elif [ -n "$BATCHER_PRIVATE_KEY" ] && [ -n "$PROPOSER_PRIVATE_KEY" ] && [ -n "$SEQUENCER_PRIVATE_KEY" ]; then
+  echo "All private keys are provided, continuing..."
+else
+  echo "Error: Private keys must be all provided or all fetched from AWS Secrets Manager."
+  exit 1
+fi
+
 # Check if all required components exist
 if [ -f "$CONFIG_PATH/deploy-config.json" ] && [ -f "$CONFIG_PATH/jwt.txt" ] && [ -f "$CONFIG_PATH/genesis.json" ] && [ -f "$CONFIG_PATH/rollup.json" ] && [ -d "$DEPLOYMENT_DIR" ]; then
   echo "All required components are present, skipping script."
@@ -87,6 +104,7 @@ else
   # If deploy-config.json does not exist, use config.sh to generate it
   echo "Generating deploy-config.json..."
   ./scripts/getting-started/config.sh
+  mv ./deploy-config/getting-started.json ./deploy-config/$DEPLOYMENT_CONTEXT.json
 fi
 
 # Copy deploy-config.json to the configurations volume
