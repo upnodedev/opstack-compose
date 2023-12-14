@@ -18,22 +18,22 @@ services:
 
   celestia-da:
     user: root
-    image: ghcr.io/rollkit/celestia-da:v0.12.1-rc0
-    command: >
-      celestia-da light start
-      --da.grpc.namespace=000002048a79bf7a2048
-      --da.grpc.listen=0.0.0.0:26650
-      --core.ip rpc-mocha.pops.one
-      --p2p.network=mocha
-      --keyring.accname=upnode
-      --gateway
+    build:
+      context: .
+      dockerfile: Dockerfile.celestia
+    # TODO: need to use a variable for volume path
+    volumes:
+      - ./entrypoints/celestia-da.sh:/celestia-da.sh
+      - ./data/celestia:/home/celestia/.celestia-light-mocha-4/
+    command: ["/bin/bash", "-c", "chmod +x /celestia-da.sh && /celestia-da.sh"]
+    env_file:
+      - .env
+      - celestia.env
     environment:
       - NODE_TYPE=light
-      - P2P_NETWORK=mocha
+      - P2P_NETWORK=${DA_P2P_NETWORK}
     ports:
       - "26650:26650"
-    volumes:
-      - ./data/celestia:/home/celestia/.celestia-light-mocha-4/
     depends_on:
       force-clone:
         condition: service_completed_successfully

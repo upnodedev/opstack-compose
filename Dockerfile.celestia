@@ -1,0 +1,30 @@
+# Use the existing image as a base
+FROM ghcr.io/rollkit/celestia-da:v0.12.1-rc0
+
+ENV GO_VERSION 1.21.2
+
+# Set environment variables to non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Ensure we are running as root
+USER root
+
+# Update and install basic dependencies
+RUN apk update && \
+    apk add --no-cache curl tar wget clang-dev pkgconf openssl-dev jq build-base git ncdu && \
+    rm -rf /var/cache/apk/*
+
+# Install Go
+RUN wget https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz -O go.tar.gz && \
+    tar -C /usr/local -xzf go.tar.gz && \
+    rm go.tar.gz
+ENV PATH=$PATH:/usr/local/go/bin
+
+# Clone celestia-node and build cel-key
+RUN git clone https://github.com/celestiaorg/celestia-node.git && \
+    cd celestia-node && \
+    go build -o cel-key ./cmd/cel-key && \
+    mv cel-key /usr/local/bin/
+
+# Define work directory
+WORKDIR /app
