@@ -6,7 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 ENV NODE_VERSION 20
 ENV GO_VERSION 1.21.2
-ENV FOUNDRY_COMMIT f5c9199
+ENV FOUNDRY_COMMIT d369d24
 
 # Update and install basic dependencies
 RUN apt-get update && \
