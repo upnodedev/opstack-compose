@@ -38,11 +38,11 @@ services:
       force-clone:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:26659/header/1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+      test: ["CMD-SHELL", "current_height=$$(curl -s http://localhost:26659/head | jq -r '.header.height'); network_height=$$(curl -s http://localhost:26659/header/999999999999 | awk -F'networkHeight: ' '{print $$2}' | cut -d',' -f1); [ \"$$current_height\" -eq \"$$network_height\" ]"]
+      interval: 2m
+      timeout: 10s
+      retries: 60
+      start_period: 5m
     restart: always
     profiles: ["celestia"]
 
