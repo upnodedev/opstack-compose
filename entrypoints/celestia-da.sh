@@ -1,7 +1,5 @@
 #!/bin/bash
 
-ACCNAME=acc
-
 # Variables for keyring and node store paths
 KEYRING_PATH="/home/celestia/$DA_FOLDER_NAME/keys/keyring-test/$ACCNAME.info"
 NODE_STORE="/home/celestia/$DA_FOLDER_NAME"
