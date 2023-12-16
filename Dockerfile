@@ -6,16 +6,20 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 ENV NODE_VERSION 20
 ENV GO_VERSION 1.21.2
+ENV FOUNDRY_COMMIT d369d24
 
 # Update and install basic dependencies
 RUN apt-get update && \
-    apt-get install -y git make jq curl wget build-essential pkg-config libssl-dev openssl ca-certificates && \
+    apt-get install -y git make jq curl wget gettext-base build-essential pkg-config libssl-dev openssl ca-certificates unzip gnupg && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
 # Install Node.js
-RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - && \
-    apt-get install -y nodejs
+RUN mkdir -p /etc/apt/keyrings && \
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg && \
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_VERSION.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list && \
+    apt-get update && \
+    apt-get install nodejs -y
 
 # Install PNPM
 RUN npm install -g pnpm
@@ -27,21 +31,34 @@ RUN ARCH=$(dpkg --print-architecture) && echo "Architecture: ${ARCH}" && \
     rm go.tar.gz
 ENV PATH=$PATH:/usr/local/go/bin
 
+# Install Rust
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
 # Install Foundry
 RUN curl -L https://foundry.paradigm.xyz | bash
 ENV PATH="/root/.foundry/bin:${PATH}"
-RUN foundryup
+RUN foundryup -C ${FOUNDRY_COMMIT}
+
+# Install AWS CLI version 2
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
+    unzip awscliv2.zip && \
+    ./aws/install && \
+    rm -rf awscliv2.zip ./aws
 
 # Define work directory
 WORKDIR /app
 
 # Copy the scripts
-COPY clone-repos.sh /app/clone-repos.sh
-COPY prepare.sh /prepare.sh
+COPY scripts/clone-repos.sh /app/clone-repos.sh
+COPY scripts/utils.sh /app/utils.sh
+COPY scripts/prepare.sh /app/prepare.sh
+COPY scripts/getting-started-config.sh /app/getting-started-config.sh
+COPY deploy-config.jso[n] /app/deploy-config.json
 
 # Set permissions
 RUN chmod +x /app/clone-repos.sh
-RUN chmod +x /prepare.sh
+RUN chmod +x /app/prepare.sh
 
 # Set the clone-repos.sh script as the entry point
-ENTRYPOINT ["/prepare.sh"]
+ENTRYPOINT ["/app/prepare.sh"]

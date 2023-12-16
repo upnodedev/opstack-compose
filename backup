@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# Check if argument is provided
+if [ $# -ne 1 ]; then
+  echo "Usage: ./backup <filename>.tar.gz"
+  exit 1
+fi
+
+# Create backup
+echo "Creating backup..."
+tar -czvf "$1" --exclude='optimism' --exclude='op-geth' --exclude='bin' -C ./data .
+echo "Backup created: $1"

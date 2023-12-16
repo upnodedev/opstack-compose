@@ -9,8 +9,42 @@ services:
       - ./data/optimism:/app/data/optimism
       - ./data/op-geth:/app/data/op-geth
       - ./data/deployments:/app/data/deployments
-      - ./data/deploy-config.json:/app/data/deploy-config/getting-started.json
-    env_file: .env
+      - ./data/configurations:/app/data/configurations
+      - ./data/bin:/app/data/bin
+      - ./data/datadir:/app/data/datadir
+    env_file:
+      - .env
+      - paths.env
+
+  celestia-da:
+    user: root
+    build:
+      context: .
+      dockerfile: Dockerfile.celestia
+    # TODO: need to use a variable for volume path
+    volumes:
+      - ./entrypoints/celestia-da.sh:/celestia-da.sh
+      - ./data/celestia:/home/celestia/.celestia-light-mocha-4/
+    command: ["/bin/bash", "-c", "chmod +x /celestia-da.sh && /celestia-da.sh"]
+    env_file:
+      - .env
+      - celestia.env
+    environment:
+      - NODE_TYPE=light
+      - P2P_NETWORK=${DA_P2P_NETWORK}
+    ports:
+      - "26650:26650"
+    depends_on:
+      force-clone:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "current_height=$$(curl -s http://localhost:26659/head | jq -r '.header.height'); network_height=$$(curl -s http://localhost:26659/header/999999999999 | awk -F'networkHeight: ' '{print $$2}' | cut -d',' -f1); [ \"$$current_height\" -eq \"$$network_height\" ]"]
+      interval: 2m
+      timeout: 10s
+      retries: 60
+      start_period: 5m
+    restart: always
+    profiles: ["celestia"]
 
   op-geth:
     build:
@@ -19,11 +53,18 @@ services:
       args:
         ENTRYPOINT_SCRIPT: op-geth.sh
     volumes:
-      - ./data/op-geth:/app/data/op-geth
+      - ./data/bin:/app/data/bin
+      - ./data/datadir:/app/data/datadir
+      - ./data/configurations:/app/data/configurations
     depends_on:
       force-clone:
         condition: service_completed_successfully
-    env_file: .env
+      celestia-da:
+        condition: service_healthy
+    env_file:
+      - .env
+      - paths.env
+      - opgeth.env
     ports:
       - "8545:8545"
       - "8551:8551"
@@ -32,6 +73,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+    restart: unless-stopped
 
   op-node:
     build:
@@ -40,11 +82,15 @@ services:
       args:
         ENTRYPOINT_SCRIPT: op-node.sh
     volumes:
-      - ./data/optimism:/app/data/optimism
+      - ./data/bin:/app/data/bin
+      - ./data/configurations:/app/data/configurations
     depends_on:
       op-geth:
         condition: service_healthy
-    env_file: .env
+    env_file:
+      - .env
+      - paths.env
+      - opnode.env
     ports:
       - "8547:8547"
     healthcheck:
@@ -52,6 +98,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+    restart: unless-stopped
 
   op-batcher:
     build:
@@ -60,15 +107,19 @@ services:
       args:
         ENTRYPOINT_SCRIPT: op-batcher.sh
     volumes:
-      - ./data/optimism:/app/data/optimism
+      - ./data/bin:/app/data/bin
     depends_on:
       op-geth:
         condition: service_healthy
       op-node:
         condition: service_healthy
-    env_file: .env
+    env_file:
+      - .env
+      - paths.env
+      - opbatcher.env
     ports:
       - "8548:8548"
+    restart: unless-stopped
 
   op-proposer:
     build:
@@ -77,12 +128,17 @@ services:
       args:
         ENTRYPOINT_SCRIPT: op-proposer.sh
     volumes:
-      - ./data/optimism:/app/data/optimism
+      - ./data/bin:/app/data/bin
+      - ./data/deployments:/app/data/deployments
     depends_on:
       op-geth:
         condition: service_healthy
       op-node:
         condition: service_healthy
-    env_file: .env
+    env_file:
+      - .env
+      - paths.env
+      - opproposer.env
     ports:
       - "8560:8560"
+    restart: unless-stopped

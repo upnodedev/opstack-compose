@@ -1,0 +1,62 @@
+{
+  "finalSystemOwner": "$GS_ADMIN_ADDRESS",
+  "portalGuardian": "$GS_ADMIN_ADDRESS",
+
+  "l1StartingBlockTag": "$L1_BLOCKHASH",
+
+  "l1ChainID": 84532,
+  "l2ChainID": $L2_CHAIN_ID,
+  "l2BlockTime": 2,
+  "l1BlockTime": 2,
+
+  "maxSequencerDrift": 600,
+  "sequencerWindowSize": 3600,
+  "channelTimeout": 300,
+
+  "p2pSequencerAddress": "$GS_SEQUENCER_ADDRESS",
+  "batchInboxAddress": "0xff00000000000000000000000000000000042069",
+  "batchSenderAddress": "$GS_BATCHER_ADDRESS",
+
+  "l2OutputOracleSubmissionInterval": 120,
+  "l2OutputOracleStartingBlockNumber": 0,
+  "l2OutputOracleStartingTimestamp": $L1_TIMESTAMP,
+
+  "l2OutputOracleProposer": "$GS_PROPOSER_ADDRESS",
+  "l2OutputOracleChallenger": "$GS_ADMIN_ADDRESS",
+
+  "finalizationPeriodSeconds": 12,
+
+  "proxyAdminOwner": "$GS_ADMIN_ADDRESS",
+  "baseFeeVaultRecipient": "$GS_ADMIN_ADDRESS",
+  "l1FeeVaultRecipient": "$GS_ADMIN_ADDRESS",
+  "sequencerFeeVaultRecipient": "$GS_ADMIN_ADDRESS",
+
+  "baseFeeVaultMinimumWithdrawalAmount": "0x8ac7230489e80000",
+  "l1FeeVaultMinimumWithdrawalAmount": "0x8ac7230489e80000",
+  "sequencerFeeVaultMinimumWithdrawalAmount": "0x8ac7230489e80000",
+  "baseFeeVaultWithdrawalNetwork": 0,
+  "l1FeeVaultWithdrawalNetwork": 0,
+  "sequencerFeeVaultWithdrawalNetwork": 0,
+
+  "gasPriceOracleOverhead": 1,
+  "gasPriceOracleScalar": 500000,
+
+  "enableGovernance": true,
+  "governanceTokenSymbol": "GAME",
+  "governanceTokenName": "Modular Games",
+  "governanceTokenOwner": "$GS_ADMIN_ADDRESS",
+
+  "l2GenesisBlockGasLimit": "0x3b9aca00",
+  "l2GenesisBlockBaseFeePerGas": "0x3b9aca00",
+  "l2GenesisRegolithTimeOffset": "0x0",
+  "l2GenesisCanyonTimeOffset": "0x0",
+
+  "eip1559Denominator": 250,
+  "eip1559DenominatorCanyon": 250,
+  "eip1559Elasticity": 6,
+
+  "systemConfigStartBlock": 0,
+
+  "requiredProtocolVersion": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "recommendedProtocolVersion": "0x0000000000000000000000000000000000000000000000000000000000000000"
+}

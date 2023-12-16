@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# Check if argument is provided
+if [ $# -ne 1 ]; then
+  echo "Usage: ./restore <filename>.tar.gz"
+  exit 1
+fi
+
+# Check if file exists
+if [ ! -f "$1" ]; then
+  echo "Backup file $1 not found."
+  exit 1
+fi
+
+# Create the data directory if it doesn't exist
+if [ ! -d "./data" ]; then
+  echo "Data directory not found. Creating it..."
+  mkdir -p ./data
+fi
+
+# Restore data
+echo "Restoring data from $1..."
+tar -xzvf "$1" -C ./data
+echo "Restore complete."
