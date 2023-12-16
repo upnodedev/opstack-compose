@@ -38,7 +38,10 @@ services:
       force-clone:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD-SHELL", "current_height=$$(curl -s http://localhost:26659/head | jq -r '.header.height'); network_height=$$(curl -s http://localhost:26659/header/999999999999 | awk -F'networkHeight: ' '{print $$2}' | cut -d',' -f1); [ \"$$current_height\" -eq \"$$network_height\" ]"]
+      test: ["CMD-SHELL", "\
+        authToken=$$(celestia-da light auth admin --p2p.network $$DA_P2P_NETWORK) && \
+        catch_up_done=$$(curl -s -X POST -H 'Content-Type: application/json' -H \"Authorization: Bearer $$authToken\" --data '{\"id\":1, \"jsonrpc\":\"2.0\", \"method\":\"das.SamplingStats\", \"params\":[]}' http://localhost:26658 | jq -r '.result.catch_up_done') && \
+        [ \"$$catch_up_done\" = \"true\" ]"]
       interval: 2m
       timeout: 10s
       retries: 60
