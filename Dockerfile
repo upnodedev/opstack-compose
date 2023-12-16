@@ -6,16 +6,20 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 ENV NODE_VERSION 20
 ENV GO_VERSION 1.21.2
+ENV FOUNDRY_COMMIT f5c9199
 
 # Update and install basic dependencies
 RUN apt-get update && \
-    apt-get install -y git make jq curl wget gettext-base build-essential pkg-config libssl-dev openssl ca-certificates unzip && \
+    apt-get install -y git make jq curl wget gettext-base build-essential pkg-config libssl-dev openssl ca-certificates unzip gnupg && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
 # Install Node.js
-RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - && \
-    apt-get install -y nodejs
+RUN mkdir -p /etc/apt/keyrings && \
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg && \
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_VERSION.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list && \
+    apt-get update && \
+    apt-get install nodejs -y
 
 # Install PNPM
 RUN npm install -g pnpm
@@ -27,10 +31,14 @@ RUN ARCH=$(dpkg --print-architecture) && echo "Architecture: ${ARCH}" && \
     rm go.tar.gz
 ENV PATH=$PATH:/usr/local/go/bin
 
+# Install Rust
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
 # Install Foundry
 RUN curl -L https://foundry.paradigm.xyz | bash
 ENV PATH="/root/.foundry/bin:${PATH}"
-RUN foundryup
+RUN foundryup -C ${FOUNDRY_COMMIT}
 
 # Install AWS CLI version 2
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
