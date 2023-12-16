@@ -45,7 +45,7 @@ services:
       interval: 2m
       timeout: 10s
       retries: 60
-      start_period: 5m
+      start_period: 1m
     restart: always
     profiles: ["celestia"]
 

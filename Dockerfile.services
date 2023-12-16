@@ -8,9 +8,15 @@ ARG ENTRYPOINT_SCRIPT
 
 # Update and install basic dependencies
 RUN apt-get update && \
-    apt-get install -y curl jq ca-certificates && \
+    apt-get install -y curl jq ca-certificates unzip && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
+# Install AWS CLI version 2
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
+    unzip awscliv2.zip && \
+    ./aws/install && \
+    rm -rf awscliv2.zip ./aws
 
 # Define work directory
 WORKDIR /app
