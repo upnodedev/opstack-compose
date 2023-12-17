@@ -38,6 +38,22 @@ if [ ! -f "$BIN_DIR/op-node" ] || [ ! -f "$BIN_DIR/op-batcher" ] || [ ! -f "$BIN
   cp ./build/bin/geth $BIN_DIR/
 fi
 
+# Check if all required components exist
+if [ -f "$CONFIG_PATH/deploy-config.json" ] && [ -f "$CONFIG_PATH/jwt.txt" ] && [ -f "$CONFIG_PATH/genesis.json" ] && [ -f "$CONFIG_PATH/rollup.json" ] && [ -d "$DEPLOYMENT_DIR" ]; then
+  echo "All required components are present, skipping script."
+  exec "$@"
+  exit 0
+fi
+
+# Check if at least one required component exists but not all
+if [ -f "$CONFIG_PATH/deploy-config.json" ] || [ -f "$CONFIG_PATH/jwt.txt" ] || [ -f "$CONFIG_PATH/genesis.json" ] || [ -f "$CONFIG_PATH/rollup.json" ] || [ -d "$DEPLOYMENT_DIR" ]; then
+  echo "Error: Partial components are present, but not all. Exiting script."
+  exit 1
+fi
+
+# If no components exist, continue with the script
+echo "No required components are present, continuing script execution."
+
 # Check if all or none of the private keys are provided
 if [ -z "$BATCHER_PRIVATE_KEY" ] && [ -z "$PROPOSER_PRIVATE_KEY" ] && [ -z "$SEQUENCER_PRIVATE_KEY" ]; then
   echo "All private keys are missing, fetching from AWS Secrets Manager..."
@@ -54,22 +70,6 @@ else
   echo "Error: Private keys must be all provided or all fetched from AWS Secrets Manager."
   exit 1
 fi
-
-# Check if all required components exist
-if [ -f "$CONFIG_PATH/deploy-config.json" ] && [ -f "$CONFIG_PATH/jwt.txt" ] && [ -f "$CONFIG_PATH/genesis.json" ] && [ -f "$CONFIG_PATH/rollup.json" ] && [ -d "$DEPLOYMENT_DIR" ]; then
-  echo "All required components are present, skipping script."
-  exec "$@"
-  exit 0
-fi
-
-# Check if at least one required component exists but not all
-if [ -f "$CONFIG_PATH/deploy-config.json" ] || [ -f "$CONFIG_PATH/jwt.txt" ] || [ -f "$CONFIG_PATH/genesis.json" ] || [ -f "$CONFIG_PATH/rollup.json" ] || [ -d "$DEPLOYMENT_DIR" ]; then
-  echo "Error: Partial components are present, but not all. Exiting script."
-  exit 1
-fi
-
-# If no components exist, continue with the script
-echo "No required components are present, continuing script execution."
 
 # Check if both L1_BLOCKHASH and L1_TIMESTAMP are set or unset
 if [ -n "$L1_BLOCKHASH" ] && [ -z "$L1_TIMESTAMP" ] || [ -z "$L1_BLOCKHASH" ] && [ -n "$L1_TIMESTAMP" ]; then
