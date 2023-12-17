@@ -29,6 +29,7 @@ config=$(cat << EOL
 {
   "finalSystemOwner": "$GS_ADMIN_ADDRESS",
   "superchainConfigGuardian": "$GS_ADMIN_ADDRESS",
+  "portalGuardian": "$GS_ADMIN_ADDRESS",
 
   "l1StartingBlockTag": "$blockhash",
 
