@@ -1,5 +1,15 @@
 #!/bin/sh
 
+# Load environment variables from .env file
+source .env
+
+# Check if SEQUENCER_MODE environment variable is set to false
+if [ "$SEQUENCER_MODE" != "true" ]; then
+  unset OP_NODE_SEQUENCER_ENABLED
+  unset OP_NODE_SEQUENCER_L1_CONFS
+  unset OP_NODE_P2P_SEQUENCER_KEY
+fi
+
 # Check if OP_NODE_P2P_SEQUENCER_KEY environment variable is set
 if [ "$OP_NODE_SEQUENCER_ENABLED" = "true" ]; then
   if [ -z "$OP_NODE_P2P_SEQUENCER_KEY" ]; then

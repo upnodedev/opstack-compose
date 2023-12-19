@@ -21,17 +21,14 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.celestia
-    # TODO: need to use a variable for volume path
     volumes:
       - ./entrypoints/celestia-da.sh:/celestia-da.sh
-      - ./data/celestia:/home/celestia/.celestia-light-mocha-4/
+      - ./data/celestia:/home/celestia/${TARGET_FOLDER_NAME}/
     command: ["/bin/bash", "-c", "chmod +x /celestia-da.sh && /celestia-da.sh"]
     env_file:
       - .env
+      - paths.env
       - celestia.env
-    environment:
-      - NODE_TYPE=light
-      - P2P_NETWORK=${DA_P2P_NETWORK}
     ports:
       - "26650:26650"
     depends_on:
@@ -39,13 +36,16 @@ services:
         condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "\
-        authToken=$$(celestia-da light auth admin --p2p.network $$DA_P2P_NETWORK) && \
-        catch_up_done=$$(curl -s -X POST -H 'Content-Type: application/json' -H \"Authorization: Bearer $$authToken\" --data '{\"id\":1, \"jsonrpc\":\"2.0\", \"method\":\"das.SamplingStats\", \"params\":[]}' http://localhost:26658 | jq -r '.result.catch_up_done') && \
-        [ \"$$catch_up_done\" = \"true\" ]"]
+        if [ \"$${SKIP_HEALTHCHECK}\" = \"true\" ]; then \
+          curl -f http://localhost:26659/header/1; \
+        else \
+          authToken=$$(celestia-da light auth admin --p2p.network $$DA_P2P_NETWORK) && \
+          catch_up_done=$$(curl -s -X POST -H 'Content-Type: application/json' -H \"Authorization: Bearer $$authToken\" --data '{\"id\":1, \"jsonrpc\":\"2.0\", \"method\":\"das.SamplingStats\", \"params\":[]}' http://localhost:26658 | jq -r '.result.catch_up_done') && \
+          [ \"$$catch_up_done\" = \"true\" ]; \
+        fi"]
       interval: 2m
       timeout: 10s
       retries: 60
-      start_period: 1m
     restart: always
     profiles: ["celestia"]
 
@@ -123,6 +123,7 @@ services:
     ports:
       - "8548:8548"
     restart: unless-stopped
+    profiles: ["sequencer"]
 
   op-proposer:
     build:
@@ -145,3 +146,4 @@ services:
     ports:
       - "8560:8560"
     restart: unless-stopped
+    profiles: ["sequencer"]
