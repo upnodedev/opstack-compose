@@ -8,17 +8,17 @@ command="docker compose"
 
 # Add profiles based on SEQUENCER_MODE and Celestia support
 [ "$SEQUENCER_MODE" = "true" ] && command+=" --profile sequencer"
-read -p "Do you need Celestia support (run celestia da light node)? (yes/no): " celestia_support
-if [[ "$celestia_support" =~ ^(yes|y)$ ]]; then
-  [ "$SKIP_HEALTHCHECK" = "true" ] && echo "Celestia da light node sync check will be skipped (SKIP_HEALTHCHECK=$SKIP_HEALTHCHECK)..."
-  command+=" --profile celestia"
+[ "$CELESTIA_MODE" = "true" ] && command+=" --profile celestia"
+
+if [ "$SKIP_HEALTHCHECK" = "true" ]; then
+  echo "Celestia da light node sync check will be skipped (SKIP_HEALTHCHECK=$SKIP_HEALTHCHECK)..."
 fi
 
 # Add the rest of the command
 command+=" up --build -d"
 
 # Confirm before running the command
-read -p "About to run: $command (SEQUENCER_MODE: $SEQUENCER_MODE). Do you want to continue? (yes/no): " confirm
+read -p "About to run: $command (SEQUENCER_MODE: $SEQUENCER_MODE, CELESTIA_MODE: $CELESTIA_MODE). Do you want to continue? (yes/no): " confirm
 if [[ "$confirm" =~ ^(yes|y)$ ]]; then
   eval $command
 else
