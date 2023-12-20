@@ -38,6 +38,21 @@ if [ ! -f "$BIN_DIR/op-node" ] || [ ! -f "$BIN_DIR/op-batcher" ] || [ ! -f "$BIN
   cp ./build/bin/geth $BIN_DIR/
 fi
 
+# Create jwt.txt if it does not exist
+if [ ! -f "$CONFIG_PATH/jwt.txt" ]; then
+  openssl rand -hex 32 > $CONFIG_PATH/jwt.txt
+fi
+
+# Check if SKIP_DEPLOYMENT_CHECK is set to true
+if [ "$SKIP_DEPLOYMENT_CHECK" = "true" ]; then
+  # Check if only genesis.json and rollup.json exist
+  if [ -f "$CONFIG_PATH/genesis.json" ] && [ -f "$CONFIG_PATH/rollup.json" ]; then
+    echo "L2 config files are present, skipping script."
+    exec "$@"
+    exit 0
+  fi
+fi
+
 # Check if all required components exist
 if [ -f "$CONFIG_PATH/deploy-config.json" ] && [ -f "$CONFIG_PATH/jwt.txt" ] && [ -f "$CONFIG_PATH/genesis.json" ] && [ -f "$CONFIG_PATH/rollup.json" ] && [ -d "$DEPLOYMENT_DIR" ]; then
   echo "All required components are present, skipping script."
@@ -145,7 +160,6 @@ go run cmd/main.go genesis l2 \
   --outfile.l2 genesis.json \
   --outfile.rollup rollup.json \
   --l1-rpc $L1_RPC_URL
-openssl rand -hex 32 > $CONFIG_PATH/jwt.txt
 cp genesis.json $CONFIG_PATH/
 cp rollup.json $CONFIG_PATH/
 
