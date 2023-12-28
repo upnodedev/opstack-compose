@@ -77,6 +77,8 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+    stop_signal: SIGINT
+    stop_grace_period: 1h
     restart: unless-stopped
 
   op-node:
@@ -97,6 +99,7 @@ services:
       - opnode.env
     ports:
       - "8547:8547"
+      - "9221:9221"
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8547 || exit 1"]
       interval: 30s

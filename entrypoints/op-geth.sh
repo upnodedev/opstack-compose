@@ -27,4 +27,4 @@ if [ -d "$DATADIR_DIR" ] && [ -z "$(ls -A $DATADIR_DIR)" ]; then
   $BIN_DIR/geth init --datadir=$DATADIR_DIR $CONFIG_PATH/genesis.json
 fi
 
-$BIN_DIR/geth
+exec $BIN_DIR/geth

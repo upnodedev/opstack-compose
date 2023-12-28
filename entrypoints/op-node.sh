@@ -1,8 +1,5 @@
 #!/bin/sh
 
-# Load environment variables from .env file
-source .env
-
 # Check if SEQUENCER_MODE environment variable is set to false
 if [ "$SEQUENCER_MODE" != "true" ]; then
   unset OP_NODE_SEQUENCER_ENABLED
