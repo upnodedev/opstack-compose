@@ -28,3 +28,6 @@ RUN git clone https://github.com/celestiaorg/celestia-node.git && \
 
 # Define work directory
 WORKDIR /app
+
+COPY ./entrypoints/celestia-da.sh /app/celestia-da.sh
+RUN chmod +x /app/celestia-da.sh

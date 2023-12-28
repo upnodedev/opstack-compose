@@ -22,9 +22,8 @@ services:
       context: .
       dockerfile: Dockerfile.celestia
     volumes:
-      - ./entrypoints/celestia-da.sh:/celestia-da.sh
       - ./data/celestia:/home/celestia/${TARGET_FOLDER_NAME}/
-    command: ["/bin/bash", "-c", "chmod +x /celestia-da.sh && /celestia-da.sh"]
+    command: ["/bin/bash", "-c", "/app/celestia-da.sh"]
     env_file:
       - .env
       - paths.env
@@ -76,7 +75,7 @@ services:
       test: ["CMD-SHELL", "curl -f http://localhost:8545 || exit 1"]
       interval: 30s
       timeout: 10s
-      retries: 5
+      retries: 15
     stop_signal: SIGINT
     stop_grace_period: 1h
     restart: unless-stopped
