@@ -6,11 +6,23 @@ clone_repo() {
   local branch_or_commit=$2
   local dest_dir=$3
 
-  # Clear the existing directory contents if it is a git repository
+  # Check if the repository is on the correct version
   if [ -d "$dest_dir/.git" ]; then
-    echo "Clearing existing repository in $dest_dir"
-    # Remove all contents including hidden files and directories
-    rm -rf "$dest_dir"/{,.[!.],..?}*
+    echo "Checking repository version in $dest_dir"
+    git -C "$dest_dir" fetch
+    [ "$(git -C "$dest_dir" rev-parse HEAD)" != "$(git -C "$dest_dir" rev-parse $branch_or_commit)" ] && needs_update=true || needs_update=false
+
+    if [ "$needs_update" = true ]; then
+      echo "Version mismatch. Clearing binaries and existing repository..."
+      # Add commands to remove binaries here
+      rm -f "$BIN_DIR"/op-node "$BIN_DIR"/op-batcher "$BIN_DIR"/op-proposer "$BIN_DIR"/geth
+
+      # Remove all contents including hidden files and directories
+      rm -rf "$dest_dir"/{,.[!.],..?}*
+    else
+      echo "Repository in $dest_dir is already up to date."
+      return
+    fi
   fi
 
   # Clone the repository
