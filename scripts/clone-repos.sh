@@ -20,8 +20,13 @@ clone_repo() {
       # Remove all contents including hidden files and directories
       rm -rf "$dest_dir"/{,.[!.],..?}*
     else
-      echo "Repository in $dest_dir is already up to date."
-      return
+      if [ ! -f "$BIN_DIR/op-node" ] || [ ! -f "$BIN_DIR/op-batcher" ] || [ ! -f "$BIN_DIR/op-proposer" ] || [ ! -f "$BIN_DIR/geth" ]; then
+        echo "Some binary is missing. Force clearing repository..."
+        rm -rf "$dest_dir"/{,.[!.],..?}*
+      else
+        echo "Repository in $dest_dir is already up to date."
+        return
+      fi
     fi
   fi
 
