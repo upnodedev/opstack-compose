@@ -30,6 +30,9 @@ services:
       - celestia.env
     expose:
       - 26650
+    ports:
+      - "26659:26659"
+      - "26658:26658"
     depends_on:
       force-clone:
         condition: service_completed_successfully
