@@ -21,7 +21,7 @@ if [ ! -f $CELESTIA_NODE_STORE_CONFIG_PATH ]; then
 fi
 
 # Start the Celestia node
-celestia-da light start \
+exec celestia-da light start \
   --da.grpc.namespace=$DA_GRPC_NAMESPACE \
   --da.grpc.listen=0.0.0.0:26650 \
   --core.ip $DA_CORE_IP \

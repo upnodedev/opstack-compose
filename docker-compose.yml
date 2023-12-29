@@ -45,6 +45,7 @@ services:
       interval: 2m
       timeout: 10s
       retries: 60
+    stop_grace_period: 10m
     restart: always
     profiles: ["celestia"]
 
@@ -76,7 +77,6 @@ services:
       interval: 30s
       timeout: 10s
       retries: 15
-    stop_signal: SIGINT
     stop_grace_period: 1h
     restart: unless-stopped
 
@@ -104,6 +104,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+    stop_grace_period: 10m
     restart: unless-stopped
 
   op-batcher:
@@ -125,6 +126,7 @@ services:
       - opbatcher.env
     ports:
       - "8548:8548"
+    stop_grace_period: 1m30s
     restart: unless-stopped
     profiles: ["sequencer"]
 
@@ -148,5 +150,6 @@ services:
       - opproposer.env
     ports:
       - "8560:8560"
+    stop_grace_period: 1m30s
     restart: unless-stopped
     profiles: ["sequencer"]

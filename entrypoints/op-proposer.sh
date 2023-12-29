@@ -16,4 +16,4 @@ if [ -z "$OP_PROPOSER_L2OO_ADDRESS" ]; then
   OP_PROPOSER_L2OO_ADDRESS=$(cat $DEPLOYMENT_DIR/L2OutputOracleProxy.json | jq -r .address)
 fi
 
-$BIN_DIR/op-proposer
+exec $BIN_DIR/op-proposer

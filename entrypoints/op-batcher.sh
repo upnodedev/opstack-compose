@@ -10,4 +10,4 @@ if [ -z "$OP_BATCHER_PRIVATE_KEY" ]; then
   export OP_BATCHER_PRIVATE_KEY
 fi
 
-$BIN_DIR/op-batcher
+exec $BIN_DIR/op-batcher
