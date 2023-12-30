@@ -101,7 +101,8 @@ services:
       - opnode.env
     ports:
       - "8547:8547"
-      - "9221:9221"
+      - "9221:9221/udp"
+      - "9221:9221/tcp"
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8547 || exit 1"]
       interval: 30s
