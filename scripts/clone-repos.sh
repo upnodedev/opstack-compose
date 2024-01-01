@@ -35,7 +35,7 @@ clone_repo() {
 
     if [ "$current_commit" != "$remote_commit" ]; then
       echo "Version mismatch. Clearing binaries and existing repository..."
-      # Add commands to remove binaries here
+      # Remove binaries
       rm -f "$BIN_DIR"/op-node "$BIN_DIR"/op-batcher "$BIN_DIR"/op-proposer "$BIN_DIR"/geth
 
       # Remove all contents including hidden files and directories
