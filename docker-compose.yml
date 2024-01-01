@@ -21,31 +21,34 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.celestia
-    # TODO: need to use a variable for volume path
     volumes:
-      - ./entrypoints/celestia-da.sh:/celestia-da.sh
-      - ./data/celestia:/home/celestia/.celestia-light-mocha-4/
-    command: ["/bin/bash", "-c", "chmod +x /celestia-da.sh && /celestia-da.sh"]
+      - ./data/celestia:/home/celestia/${TARGET_FOLDER_NAME}/
+    command: ["/bin/bash", "-c", "/app/celestia-da.sh"]
     env_file:
       - .env
+      - paths.env
       - celestia.env
-    environment:
-      - NODE_TYPE=light
-      - P2P_NETWORK=${DA_P2P_NETWORK}
+    expose:
+      - 26650
     ports:
-      - "26650:26650"
+      - "26659:26659"
+      - "26658:26658"
     depends_on:
       force-clone:
         condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "\
-        authToken=$$(celestia-da light auth admin --p2p.network $$DA_P2P_NETWORK) && \
-        catch_up_done=$$(curl -s -X POST -H 'Content-Type: application/json' -H \"Authorization: Bearer $$authToken\" --data '{\"id\":1, \"jsonrpc\":\"2.0\", \"method\":\"das.SamplingStats\", \"params\":[]}' http://localhost:26658 | jq -r '.result.catch_up_done') && \
-        [ \"$$catch_up_done\" = \"true\" ]"]
+        if [ \"$${SKIP_HEALTHCHECK}\" = \"true\" ]; then \
+          curl -f http://localhost:26659/header/1; \
+        else \
+          authToken=$$(celestia-da light auth admin --p2p.network $$DA_P2P_NETWORK) && \
+          catch_up_done=$$(curl -s -X POST -H 'Content-Type: application/json' -H \"Authorization: Bearer $$authToken\" --data '{\"id\":1, \"jsonrpc\":\"2.0\", \"method\":\"das.SamplingStats\", \"params\":[]}' http://localhost:26658 | jq -r '.result.catch_up_done') && \
+          [ \"$$catch_up_done\" = \"true\" ]; \
+        fi"]
       interval: 2m
       timeout: 10s
       retries: 60
-      start_period: 5m
+    stop_grace_period: 10m
     restart: always
     profiles: ["celestia"]
 
@@ -64,6 +67,7 @@ services:
         condition: service_completed_successfully
       celestia-da:
         condition: service_healthy
+        required: false
     env_file:
       - .env
       - paths.env
@@ -75,7 +79,8 @@ services:
       test: ["CMD-SHELL", "curl -f http://localhost:8545 || exit 1"]
       interval: 30s
       timeout: 10s
-      retries: 5
+      retries: 15
+    stop_grace_period: 1h
     restart: unless-stopped
 
   op-node:
@@ -96,11 +101,14 @@ services:
       - opnode.env
     ports:
       - "8547:8547"
+      - "9221:9221/udp"
+      - "9221:9221/tcp"
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8547 || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
+    stop_grace_period: 10m
     restart: unless-stopped
 
   op-batcher:
@@ -122,7 +130,9 @@ services:
       - opbatcher.env
     ports:
       - "8548:8548"
+    stop_grace_period: 1m30s
     restart: unless-stopped
+    profiles: ["sequencer"]
 
   op-proposer:
     build:
@@ -144,4 +154,6 @@ services:
       - opproposer.env
     ports:
       - "8560:8560"
+    stop_grace_period: 1m30s
     restart: unless-stopped
+    profiles: ["sequencer"]

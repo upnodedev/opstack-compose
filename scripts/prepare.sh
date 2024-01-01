@@ -3,22 +3,11 @@
 # Ensure script stops on first error
 set -e
 
-# Initialize a flag to track if cloning was done
-cloned=false
-
 # Clone repositories if necessary
-if [ ! -d "$OPTIMISM_DIR/.git" ] || [ ! -d "$OP_GETH_DIR/.git" ]; then
-  /app/clone-repos.sh
-  cloned=true
-fi
+/app/clone-repos.sh
 
 # Check and build binaries if at least one doesn't exist
 if [ ! -f "$BIN_DIR/op-node" ] || [ ! -f "$BIN_DIR/op-batcher" ] || [ ! -f "$BIN_DIR/op-proposer" ] || [ ! -f "$BIN_DIR/geth" ]; then
-  # Clone repositories if not already done
-  if [ "$cloned" = false ]; then
-    /app/clone-repos.sh
-  fi
-
   # Build op-node, op-batcher and op-proposer
   cd $OPTIMISM_DIR
   pnpm install
@@ -38,21 +27,19 @@ if [ ! -f "$BIN_DIR/op-node" ] || [ ! -f "$BIN_DIR/op-batcher" ] || [ ! -f "$BIN
   cp ./build/bin/geth $BIN_DIR/
 fi
 
-# Check if all or none of the private keys are provided
-if [ -z "$BATCHER_PRIVATE_KEY" ] && [ -z "$PROPOSER_PRIVATE_KEY" ] && [ -z "$SEQUENCER_PRIVATE_KEY" ]; then
-  echo "All private keys are missing, fetching from AWS Secrets Manager..."
-  secrets=$(aws secretsmanager get-secret-value --secret-id $AWS_SECRET_ARN | jq '.SecretString | fromjson')
+# Create jwt.txt if it does not exist
+if [ ! -f "$CONFIG_PATH/jwt.txt" ]; then
+  openssl rand -hex 32 > $CONFIG_PATH/jwt.txt
+fi
 
-  BATCHER_PRIVATE_KEY="$(echo "${secrets}" | jq -r '.BATCHER_PRIVATE_KEY')"
-  PROPOSER_PRIVATE_KEY="$(echo "${secrets}" | jq -r '.PROPOSER_PRIVATE_KEY')"
-  SEQUENCER_PRIVATE_KEY="$(echo "${secrets}" | jq -r '.SEQUENCER_PRIVATE_KEY')"
-
-  export BATCHER_PRIVATE_KEY PROPOSER_PRIVATE_KEY SEQUENCER_PRIVATE_KEY
-elif [ -n "$BATCHER_PRIVATE_KEY" ] && [ -n "$PROPOSER_PRIVATE_KEY" ] && [ -n "$SEQUENCER_PRIVATE_KEY" ]; then
-  echo "All private keys are provided, continuing..."
-else
-  echo "Error: Private keys must be all provided or all fetched from AWS Secrets Manager."
-  exit 1
+# Check if SKIP_DEPLOYMENT_CHECK is set to true
+if [ "$SKIP_DEPLOYMENT_CHECK" = "true" ]; then
+  # Check if only genesis.json and rollup.json exist
+  if [ -f "$CONFIG_PATH/genesis.json" ] && [ -f "$CONFIG_PATH/rollup.json" ]; then
+    echo "L2 config files are present, skipping script."
+    exec "$@"
+    exit 0
+  fi
 fi
 
 # Check if all required components exist
@@ -70,6 +57,23 @@ fi
 
 # If no components exist, continue with the script
 echo "No required components are present, continuing script execution."
+
+# Check if all or none of the private keys are provided
+if [ -z "$BATCHER_PRIVATE_KEY" ] && [ -z "$PROPOSER_PRIVATE_KEY" ] && [ -z "$SEQUENCER_PRIVATE_KEY" ]; then
+  echo "All private keys are missing, fetching from AWS Secrets Manager..."
+  secrets=$(aws secretsmanager get-secret-value --secret-id $AWS_SECRET_ARN | jq '.SecretString | fromjson')
+
+  BATCHER_PRIVATE_KEY="$(echo "${secrets}" | jq -r '.BATCHER_PRIVATE_KEY')"
+  PROPOSER_PRIVATE_KEY="$(echo "${secrets}" | jq -r '.PROPOSER_PRIVATE_KEY')"
+  SEQUENCER_PRIVATE_KEY="$(echo "${secrets}" | jq -r '.SEQUENCER_PRIVATE_KEY')"
+
+  export BATCHER_PRIVATE_KEY PROPOSER_PRIVATE_KEY SEQUENCER_PRIVATE_KEY
+elif [ -n "$BATCHER_PRIVATE_KEY" ] && [ -n "$PROPOSER_PRIVATE_KEY" ] && [ -n "$SEQUENCER_PRIVATE_KEY" ]; then
+  echo "All private keys are provided, continuing..."
+else
+  echo "Error: Private keys must be all provided or all fetched from AWS Secrets Manager."
+  exit 1
+fi
 
 # Check if both L1_BLOCKHASH and L1_TIMESTAMP are set or unset
 if [ -n "$L1_BLOCKHASH" ] && [ -z "$L1_TIMESTAMP" ] || [ -z "$L1_BLOCKHASH" ] && [ -n "$L1_TIMESTAMP" ]; then
@@ -145,7 +149,6 @@ go run cmd/main.go genesis l2 \
   --outfile.l2 genesis.json \
   --outfile.rollup rollup.json \
   --l1-rpc $L1_RPC_URL
-openssl rand -hex 32 > $CONFIG_PATH/jwt.txt
 cp genesis.json $CONFIG_PATH/
 cp rollup.json $CONFIG_PATH/
 

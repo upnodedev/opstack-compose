@@ -1,0 +1,35 @@
+#!/bin/bash
+
+# Load environment variables from .env file
+source .env
+
+# Initialize the command
+command="docker compose"
+
+# Add profiles based on SEQUENCER_MODE and Celestia support
+[ "$SEQUENCER_MODE" = "true" ] && command+=" --profile sequencer"
+[ "$CELESTIA_MODE" = "true" ] && command+=" --profile celestia"
+
+# Define colors
+ORANGE='\033[0;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+if [ "$SKIP_DEPLOYMENT_CHECK" = "true" ]; then
+  echo -e "${ORANGE}WARNING${NC}: Only genesis.json and rollup.json will be checked (SKIP_DEPLOYMENT_CHECK=$SKIP_DEPLOYMENT_CHECK)."
+fi
+
+if [ "$SKIP_HEALTHCHECK" = "true" ]; then
+  echo -e "${ORANGE}WARNING${NC}: Celestia da light node sync check will be skipped (SKIP_HEALTHCHECK=$SKIP_HEALTHCHECK)."
+fi
+
+# Add the rest of the command
+command+=" up --build -d"
+
+# Confirm before running the command
+echo -ne "About to run: ${BLUE}$command${NC} (SEQUENCER_MODE: $SEQUENCER_MODE, CELESTIA_MODE: $CELESTIA_MODE). Do you want to continue? (yes/no): "; read confirm
+if [[ "$confirm" =~ ^(yes|y)$ ]]; then
+  eval $command
+else
+  echo "Command execution cancelled."
+fi
