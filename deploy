@@ -1,0 +1,336 @@
+#!/bin/bash
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+CYAN='\033[0;36m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+config_path=data/configurations
+
+set -e
+
+check_existing_deployment() {
+  if [ -d "$config_path" ] && [ "$(ls -A $config_path)" ]; then
+    echo -e "${YELLOW}WARNING: There is an existing OP Stack deployment.${NC}"
+    read -p "Would you like to ERASE all data and continue? (y/n): " erase_decision
+    if [[ "$erase_decision" == "y" ]]; then
+      echo -e "${RED}Cleaning existing OP Stack deployment...${NC}"
+      rm -rf ./data/*
+      echo -e "${GREEN}Cleaning complete.${NC}"
+    else
+      echo -e "${CYAN}Exiting without making changes.${NC}"
+      exit 0
+    fi
+  fi
+}
+
+detect_l1_kind() {
+  local rpc_url="$1"
+  local chain_id="$2"
+
+  case "$rpc_url" in
+    *alchemy.com*) echo "alchemy" ;;
+    *quicknode.com*|*quiknode.pro*) [ "$chain_id" -eq 1 ] && echo "quicknode" || echo "basic" ;;
+    *) echo "basic" ;;
+  esac
+}
+
+get_l1_chain_id() {
+  local rpc_url="$1"
+  local chain_id_hex
+  chain_id_hex="$(cast rpc eth_chainId --rpc-url "$rpc_url")" || exit 1
+  chain_id_hex="${chain_id_hex//\"/}"
+  echo "$((16#${chain_id_hex#*x}))"
+}
+
+get_address() {
+  local key_name=$1
+  local priv_key_var="${key_name}_PRIVATE_KEY"
+  local address_var="${key_name}_ADDRESS"
+
+  if [ -z "${!priv_key_var}" ]; then
+    echo "Private key for $key_name not provided."
+    return 1
+  fi
+
+  local address
+  address="$(cast wallet address --private-key "${!priv_key_var}")" || exit 1
+  eval "$address_var=$address"
+}
+
+display_addresses() {
+  local label_width=18
+  local address_width=42
+
+  local border=$(printf '%*s\n' $((label_width + address_width + 4)) '' | tr ' ' '-')
+
+  echo -e "${CYAN}${border}${NC}"
+  printf "${CYAN}| %-${label_width}s %${address_width}s |${NC}\n" "Admin Address:" "$ADMIN_ADDRESS"
+  printf "${CYAN}| %-${label_width}s %${address_width}s |${NC}\n" "Batcher Address:" "$BATCHER_ADDRESS"
+  printf "${CYAN}| %-${label_width}s %${address_width}s |${NC}\n" "Proposer Address:" "$PROPOSER_ADDRESS"
+  printf "${CYAN}| %-${label_width}s %${address_width}s |${NC}\n" "Sequencer Address:" "$SEQUENCER_ADDRESS"
+  echo -e "${CYAN}${border}${NC}"
+}
+
+handle_aws_secrets() {
+  read -p "Are you using AWS Secret Manager? (y/n): " aws_decision
+  if [[ "$aws_decision" == "y" ]]; then
+    read -p "AWS Secrets Manager ARN: " AWS_SECRET_ARN
+    read -p "AWS Secrets Manager Region: " AWS_SECRET_REGION
+    read -p "AWS Key ID: " AWS_KEY_ID
+    read -p "AWS Secret: " AWS_SECRET
+
+    [ -z "$AWS_SECRET_ARN" ] && echo "AWS Secret Manager ARN is required." && exit 1
+    [ -z "$AWS_SECRET_REGION" ] && echo "AWS Secret Manager Region is required." && exit 1
+    [ -z "$AWS_KEY_ID" ] && echo "AWS Key ID is required." && exit 1
+    [ -z "$AWS_SECRET" ] && echo "AWS Secret is required." && exit 1
+  else
+    read -p "Admin private key: " ADMIN_PRIVATE_KEY
+    get_address "ADMIN"
+
+    read -p "Batcher private key: " BATCHER_PRIVATE_KEY
+    get_address "BATCHER"
+
+    read -p "Proposer private key: " PROPOSER_PRIVATE_KEY
+    get_address "PROPOSER"
+
+    read -p "Sequencer private key: " SEQUENCER_PRIVATE_KEY
+    get_address "SEQUENCER"
+
+    display_addresses
+  fi
+}
+
+handle_celestia() {
+  read -p "Data availability provider (1 for Ethereum L1, 2 for Celestia): " da_provider
+  if [[ "$da_provider" == "2" ]]; then
+    read -p "Celestia P2P network (mocha/celestia): " CELESTIA_P2P_NETWORK
+    read -p "Celestia keyring mnemonic: " CELESTIA_KEYRING_MNEMONIC
+
+    [ -z "$CELESTIA_P2P_NETWORK" ] && echo "Celestia P2P network is required." && exit 1
+    [ -z "$CELESTIA_KEYRING_MNEMONIC" ] && echo "Celestia keyring mnemonic is required." && exit 1
+    CELESTIA_MODE=true
+  else
+    CELESTIA_MODE=false
+  fi
+}
+
+deploy_new_opstack() {
+  check_existing_deployment
+  read -p "L1 RPC URL: " L1_RPC_URL
+
+  [ -z "$L1_RPC_URL" ] && echo "L1 RPC URL is required." && exit 1
+
+  L1_CHAIN_ID=$(get_l1_chain_id "$L1_RPC_URL")
+  L1_KIND=$(detect_l1_kind "$L1_RPC_URL" "$L1_CHAIN_ID")
+  echo -e "L1 Chain ID: $L1_CHAIN_ID (Detected as ${GREEN}$L1_KIND${NC})"
+  read -p "L2 chain ID (42069): " L2_CHAIN_ID
+  L2_CHAIN_ID=${L2_CHAIN_ID:-42069}
+
+  read -p "Use custom optimism monorepo? (y/n): " custom_optimism_decision
+
+  if [[ "$custom_optimism_decision" == "y" ]]; then
+    read -p "Custom optimism monorepo URL: " CUSTOM_OPTIMISM_REPO
+    read -p "Custom optimism branch/tag/commit: " CUSTOM_OPTIMISM_BRANCH_OR_COMMIT
+  fi
+
+  read -p "Use custom op-geth repository? (y/n): " custom_opgeth_decision
+
+  if [[ "$custom_opgeth_decision" == "y" ]]; then
+    read -p "Custom op-geth monorepo URL: " CUSTOM_OPGETH_REPO
+    read -p "Custom op-geth branch/tag/commit: " CUSTOM_OPGETH_BRANCH_OR_COMMIT
+  fi
+
+  read -p "Deploy config name (getting-started): " DEPLOY_CONFIG_NAME
+  DEPLOY_CONFIG_NAME=${DEPLOY_CONFIG_NAME:-getting-started}
+  handle_aws_secrets
+
+  read -p "Deployer private key (ADMIN_PRIVATE_KEY): " DEPLOYER_PRIVATE_KEY
+  DEPLOYER_PRIVATE_KEY=${DEPLOYER_PRIVATE_KEY:-$ADMIN_PRIVATE_KEY}
+  get_address "DEPLOYER"
+
+  echo -e "${YELLOW}NOTE${NC}: Remember to fund the admin, deployer, batcher, and proposer wallet."
+
+  handle_celestia
+
+  echo -e "${YELLOW}NOTE${NC}: Remember to fund the Celestia wallet."
+
+  read -p "Confirm deployment? (y/n): " confirm_deployment
+  if [[ "$confirm_deployment" == "y" ]]; then
+    echo "Generating .env and running docker compose up..."
+    create_env_file
+    ./run
+  else
+    echo "${RED}Deployment cancelled.${NC}"
+  fi
+}
+
+launch_sequencing_node() {
+  echo "Not implemented yet."
+}
+
+main() {
+  echo -e "###################################################################################"
+  echo -e "#              Welcome to opstack-compose OP Stack launcher by Upnode             #"
+  echo -e "###################################################################################"
+  echo ""
+
+  PS3="Choose what you want to do: "
+  options=("Deploy a new OP Stack chain" "Launch a sequencing node for an existing OP Stack chain" "Launch an RPC node for an existing OP Stack chain" "Backup OP stack deployment config")
+  select opt in "${options[@]}"
+  do
+    case $opt in
+      "Deploy a new OP Stack chain")
+        deploy_new_opstack
+        break
+        ;;
+      "Launch a sequencing node for an existing OP Stack chain")
+        launch_sequencing_node
+        break
+        ;;
+      "Launch an RPC node for an existing OP Stack chain")
+        echo "Not implemented yet."
+        break
+        ;;
+      "Backup OP stack deployment config")
+        echo "Not implemented yet."
+        break
+        ;;
+      *) echo -e "${RED}Invalid option $REPLY${NC}";;
+    esac
+  done
+}
+
+main
+
+create_env_file() {
+  cat <<EOF >.env
+##################################################
+#              Global Configuration              #
+##################################################
+
+# SKIP_DEPLOYMENT_CHECK: 'true' skips checking all deployment components, only checks genesis.json and rollup.json; 'false' checks all components. Default: false.
+SKIP_DEPLOYMENT_CHECK=${SKIP_DEPLOYMENT_CHECK:-false}
+
+# SEQUENCER_MODE: 'true' enables sequencer, runs op-batcher/op-proposer; 'false' disables them. Default: true.
+SEQUENCER_MODE=${SEQUENCER_MODE:-true}
+
+# CELESTIA_MODE: 'true' runs celestia-da service; 'false' disables it. Default: true.
+CELESTIA_MODE=${CELESTIA_MODE}
+
+##################################################
+#              Cloning Configuration             #
+##################################################
+
+# Repository configuration for optimism and op-geth
+# If not set, default to the official optimism implementation
+
+OPTIMISM_REPO_URL=${CUSTOM_OPTIMISM_REPO:-https://github.com/ethereum-optimism/optimism.git}
+OPTIMISM_BRANCH_OR_COMMIT=${CUSTOM_OPTIMISM_BRANCH_OR_COMMIT:-op-node/v1.3.0}
+
+OP_GETH_REPO_URL=${CUSTOM_OPGETH_REPO:-https://github.com/ethereum-optimism/op-geth.git}
+OP_GETH_BRANCH_OR_COMMIT=${CUSTOM_OPGETH_BRANCH_OR_COMMIT:-v1.101304.2}
+
+##################################################
+#                 Accounts Info                  #
+##################################################
+
+# Admin account
+ADMIN_PRIVATE_KEY=${ADMIN_PRIVATE_KEY}
+
+# Batcher account
+BATCHER_PRIVATE_KEY=${BATCHER_PRIVATE_KEY}
+
+# Proposer account
+PROPOSER_PRIVATE_KEY=${PROPOSER_PRIVATE_KEY}
+
+# Sequencer account
+SEQUENCER_PRIVATE_KEY=${SEQUENCER_PRIVATE_KEY}
+
+# Contract deployer account
+DEPLOYER_PRIVATE_KEY=${DEPLOYER_PRIVATE_KEY}
+
+##################################################
+#              celestia-da Configuration         #
+##################################################
+
+# These variables are required if the celestia profile is applied
+
+# Skip celestia da light node sync check
+SKIP_HEALTHCHECK=false
+
+# Necessary because it's used in the build of the celestia-da service and in celestia.env/paths.env
+TARGET_FOLDER_NAME=${TARGET_FOLDER_NAME:-.celestia-light-mocha-4}
+# Necessary because it's used in the build of the celestia-da service and in celestia.env
+P2P_NETWORK=${CELESTIA_P2P_NETWORK:-mocha}
+
+# Used in celestia.env/paths.env
+CELESTIA_KEYRING_MNEMONIC="${CELESTIA_KEYRING_MNEMONIC}"
+CELESTIA_ACCNAME=acc
+
+##################################################
+#              op-node Configuration             #
+##################################################
+
+# The kind of RPC provider, used to inform optimal transactions receipts
+# fetching. Valid options: alchemy, quicknode, infura, parity, nethermind,
+# debug_geth, erigon, basic, any.
+L1_RPC_KIND=$L1_KIND
+
+# Used in opnode.env
+P2P_AGENT=
+P2P_ADVERTISE_IP=
+
+##################################################
+#              op-geth Configuration             #
+##################################################
+
+# The chain identifier for the L2 network
+L2_CHAIN_ID=${L2_CHAIN_ID:-42069}
+
+# Used in opgeth.env
+MINER_ETHERBASE_ADDRESS=
+UNLOCK_ADDRESS=
+
+# If GETH_PASSWORD is set in opgeth.env
+PASSWORD=
+
+##################################################
+#              op-proposer Configuration         #
+##################################################
+
+# Used in opproposer.env
+L2OO_ADDRESS=
+
+##################################################
+#               Contract Deployment              #
+##################################################
+
+# RPC URL for the L1 network to interact with
+L1_RPC_URL=$L1_RPC_URL
+
+# Name for the deployed network
+DEPLOYMENT_CONTEXT=$DEPLOY_CONFIG_NAME
+
+# Optional Tenderly details for simulation link during deployment
+TENDERLY_PROJECT=
+TENDERLY_USERNAME=
+
+# Optional Etherscan API key for contract verification
+ETHERSCAN_API_KEY=
+
+##################################################
+#               AWS Credentials                  #
+##################################################
+
+# AWS Secrets Manager ARN
+AWS_SECRET_ARN=${AWS_SECRET_ARN}
+
+# AWS Credentials
+AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
+EOF
+}
