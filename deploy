@@ -167,8 +167,53 @@ deploy_new_opstack() {
   fi
 }
 
-launch_sequencing_node() {
+restore_existing_opstack_node() {
   echo "Not implemented yet."
+}
+
+launch_existing_opstack_node() {
+  if [ ! -f ".env" ]; then
+    echo "File .env not found."
+    restore_existing_opstack_node
+    return
+  fi
+
+  source .env
+
+  if [ -z "$BATCHER_PRIVATE_KEY" ] || [ -z "$PROPOSER_PRIVATE_KEY" ] || [ -z "$SEQUENCER_PRIVATE_KEY" ]; then
+    if [ -z "$AWS_SECRET_ARN" ] || [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ] || [ -z "$AWS_DEFAULT_REGION" ]; then
+      echo "Either BATCHER_PRIVATE_KEY, PROPOSER_PRIVATE_KEY, SEQUENCER_PRIVATE_KEY or AWS_SECRET_ARN, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION are required."
+      restore_existing_opstack_node
+      return
+    fi
+  fi
+
+  echo -e "${BLUE}SEQUENCER_MODE${NC} (If false - op-batcher/op-proposer are disabled and launch an RPC node for an existing OP Stack chain): ${SEQUENCER_MODE}"
+  echo -e "${BLUE}SKIP_DEPLOYMENT_CHECK${NC} (Skip checking for the presence of deploy-config.json and deployment. Suitable for RPC node): ${SKIP_DEPLOYMENT_CHECK}"
+
+  read -p "Update these variables in your .env? " update_decision
+
+  if [[ "$update_decision" == "y" ]]; then
+    read -p "SEQUENCER_MODE (true/false): " SEQUENCER_MODE
+    read -p "SKIP_DEPLOYMENT_CHECK (true/false): " SKIP_DEPLOYMENT_CHECK
+
+    if grep -q "^SEQUENCER_MODE=" ".env"; then
+      sed -i "s/^SEQUENCER_MODE=.*/SEQUENCER_MODE=${SEQUENCER_MODE}/" ".env"
+    else
+      echo "SEQUENCER_MODE=${SEQUENCER_MODE}" >> ".env"
+    fi
+
+    if grep -q "^SKIP_DEPLOYMENT_CHECK=" ".env"; then
+      sed -i "s/^SKIP_DEPLOYMENT_CHECK=.*/SKIP_DEPLOYMENT_CHECK=${SKIP_DEPLOYMENT_CHECK}/" ".env"
+    else
+      echo "SKIP_DEPLOYMENT_CHECK=${SKIP_DEPLOYMENT_CHECK}" >> ".env"
+    fi
+  fi
+
+  if [ ! -f "$CONFIG_PATH/deploy-config.json" ] || [ ! -f "$CONFIG_PATH/jwt.txt" ] || [ ! -f "$CONFIG_PATH/genesis.json" ] || [ ! -f "$CONFIG_PATH/rollup.json" ] || [ ! -d "$DEPLOYMENT_DIR" ]; then
+    echo "Required config files or deployment directory not found."
+    exit 1
+  fi
 }
 
 main() {
@@ -178,7 +223,7 @@ main() {
   echo ""
 
   PS3="Choose what you want to do: "
-  options=("Deploy a new OP Stack chain" "Launch a sequencing node for an existing OP Stack chain" "Launch an RPC node for an existing OP Stack chain" "Backup OP stack deployment config")
+  options=("Deploy a new OP Stack chain" "Launch a node for an existing OP Stack chain" "Backup OP stack deployment config")
   select opt in "${options[@]}"
   do
     case $opt in
@@ -186,12 +231,8 @@ main() {
         deploy_new_opstack
         break
         ;;
-      "Launch a sequencing node for an existing OP Stack chain")
-        launch_sequencing_node
-        break
-        ;;
-      "Launch an RPC node for an existing OP Stack chain")
-        echo "Not implemented yet."
+      "Launch a node for an existing OP Stack chain")
+        launch_existing_opstack_node
         break
         ;;
       "Backup OP stack deployment config")
