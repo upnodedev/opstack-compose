@@ -35,7 +35,7 @@ fi
 # Check if SKIP_DEPLOYMENT_CHECK is set to true
 if [ "$SKIP_DEPLOYMENT_CHECK" = "true" ]; then
   # Check if only genesis.json and rollup.json exist
-  if [ -f "$CONFIG_PATH/genesis.json" ] && [ -f "$CONFIG_PATH/rollup.json" ]; then
+  if [ -f "$CONFIG_PATH/genesis.json" ] && [ -f "$CONFIG_PATH/rollup.json" ] && [ -f "$CONFIG_PATH/jwt.txt" ]; then
     echo "L2 config files are present, skipping script."
     exec "$@"
     exit 0
