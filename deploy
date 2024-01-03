@@ -1,4 +1,5 @@
 #!/bin/bash
+# TODO: It may be worth removing SKIP_DEPLOYMENT_CHECK in the future.
 
 RED='\e[0;31m'
 GREEN='\e[0;32m'
@@ -138,7 +139,7 @@ handle_celestia() {
               CELESTIA_P2P_NETWORK=mocha
               break
               ;;
-          "celestia")
+            "celestia")
               CELESTIA_P2P_NETWORK=celestia
               break
               ;;
@@ -148,11 +149,16 @@ handle_celestia() {
 
         read -rp "Celestia target folder name (default: .celestia-light-mocha-4): " TARGET_FOLDER_NAME
         TARGET_FOLDER_NAME=${TARGET_FOLDER_NAME:-.celestia-light-mocha-4}
-        read -rp "Celestia keyring mnemonic: " CELESTIA_KEYRING_MNEMONIC
 
-        [ -z "$CELESTIA_KEYRING_MNEMONIC" ] && echo "Celestia keyring mnemonic is required." && exit 1
+        if [ "$SEQUENCER_MODE" == "false" ]; then
+          CELESTIA_KEYRING_MNEMONIC="test test test test test test test test test test test junk"
+          echo "Using dummy mnemonic for RPC node."
+        else
+          read -rp "Celestia keyring mnemonic: " CELESTIA_KEYRING_MNEMONIC
+          [ -z "$CELESTIA_KEYRING_MNEMONIC" ] && echo "Celestia keyring mnemonic is required." && exit 1
+        fi
 
-        echo -e "${YELLOW}NOTE${NC}: Remember to fund the Celestia wallet."
+        echo -e "${YELLOW}NOTE${NC}: Remember to fund the Celestia wallet if you're running a sequencing node."
 
         break
         ;;
@@ -355,12 +361,119 @@ deploy_new_opstack() {
 }
 
 load_end() {
-  # shellcheck source=/dev/null
+  # shellcheck disable=SC1091
   source .env
 }
 
 restore_existing_opstack_node() {
-  echo "Not implemented yet."
+  echo -e "${GREEN}Restoring existing OP Stack node...${NC}"
+  read -rp "L1 RPC URL: " L1_RPC_URL
+
+  [ -z "$L1_RPC_URL" ] && echo "L1 RPC URL is required." && exit 1
+
+  L1_CHAIN_ID=$(get_l1_chain_id "$L1_RPC_URL")
+  L1_KIND=$(detect_l1_kind "$L1_RPC_URL" "$L1_CHAIN_ID")
+  echo -e "L1 Chain ID: $L1_CHAIN_ID (Detected as ${GREEN}$L1_KIND${NC})"
+  read -rp "L2 chain ID (default: 42069): " L2_CHAIN_ID
+
+  L2_CHAIN_ID=${L2_CHAIN_ID:-42069}
+
+  read -rp "Use custom optimism monorepo (default: $default_optimism_repo <-> $default_optimism_version)? (y/n): " custom_optimism_decision
+
+  if [[ "$custom_optimism_decision" == "y" ]]; then
+    read -rp "Custom optimism monorepo URL: " CUSTOM_OPTIMISM_REPO
+    read -rp "Custom optimism branch/tag/commit: " CUSTOM_OPTIMISM_BRANCH_OR_COMMIT
+
+    if [ -z "$CUSTOM_OPTIMISM_REPO" ] || [ -z "$CUSTOM_OPTIMISM_BRANCH_OR_COMMIT" ]; then
+      echo "Custom optimism monorepo URL and branch/tag/commit are required."
+      exit 1
+    fi
+  fi
+
+  read -rp "Use custom op-geth repository (default: $default_opgeth_repo <-> $default_opgeth_version)? (y/n): " custom_opgeth_decision
+
+  if [[ "$custom_opgeth_decision" == "y" ]]; then
+    read -rp "Custom op-geth monorepo URL: " CUSTOM_OPGETH_REPO
+    read -rp "Custom op-geth branch/tag/commit: " CUSTOM_OPGETH_BRANCH_OR_COMMIT
+
+    if [ -z "$CUSTOM_OPGETH_REPO" ] || [ -z "$CUSTOM_OPGETH_BRANCH_OR_COMMIT" ]; then
+      echo "Custom op-geth monorepo URL and branch/tag/commit are required."
+      exit 1
+    fi
+  fi
+
+  PS3="> "
+  mkdir -p ./temp
+  echo "How would you like to restore the configuration?"
+  select restore_option in "Restore from opstack-compose backup archive" "Download each file from the internet"; do
+    case $restore_option in
+      "Restore from opstack-compose backup archive")
+        read -rp "Backup archive file path / URL: " BACKUP_ARCHIVE_PATH
+        if [ -z "$BACKUP_ARCHIVE_PATH" ]; then
+          echo "Backup archive file path / URL is required."
+          exit 1
+        fi
+
+        if [[ $BACKUP_ARCHIVE_PATH == http* ]]; then
+          temp_backup_archive="./temp/backup_archive.tar.gz"
+          echo "Downloading backup archive from $BACKUP_ARCHIVE_PATH..."
+          curl -o "$temp_backup_archive" "$BACKUP_ARCHIVE_PATH"
+          BACKUP_ARCHIVE_PATH="$temp_backup_archive"
+        fi
+
+        ./restore "$BACKUP_ARCHIVE_PATH"
+        break
+        ;;
+      "Download each file from the internet")
+        if [ "$SKIP_DEPLOYMENT_CHECK" = "true" ]; then
+          read -rp "rollup.json file path / URL: " ROLLUP_JSON_PATH
+          if [[ $ROLLUP_JSON_PATH == http* ]]; then
+            temp_rollup_json="./temp/rollup.json"
+            echo "Downloading rollup.json from $ROLLUP_JSON_PATH..."
+            curl -o "$temp_rollup_json" "$ROLLUP_JSON_PATH"
+            ROLLUP_JSON_PATH="$temp_rollup_json"
+          fi
+
+          read -rp "genesis.json file path / URL: " GENESIS_JSON_PATH
+          if [[ $GENESIS_JSON_PATH == http* ]]; then
+            temp_genesis_json="./temp/genesis.json"
+            echo "Downloading genesis.json from $GENESIS_JSON_PATH..."
+            curl -o "$temp_genesis_json" "$GENESIS_JSON_PATH"
+            GENESIS_JSON_PATH="$temp_genesis_json"
+          fi
+
+          mkdir -p "$config_path"
+          mv "$ROLLUP_JSON_PATH" "$config_path/rollup.json"
+          mv "$GENESIS_JSON_PATH" "$config_path/genesis.json"
+          echo "Restore complete."
+        else
+          echo "This option is only available if SKIP_DEPLOYMENT_CHECK is true. Please select "Restore from opstack-compose backup archive"."
+        fi
+        break
+        ;;
+      *) echo -e "${RED}Invalid option $REPLY${NC}";;
+    esac
+  done
+
+  if [ "$SEQUENCER_MODE" == "true" ]; then
+    read -rp "Deploy config name (default: getting-started): " DEPLOY_CONFIG_NAME
+    DEPLOY_CONFIG_NAME=${DEPLOY_CONFIG_NAME:-getting-started}
+    handle_aws_secrets
+  else
+    echo "RPC node only. Skip setting up keys or AWS Secret Manager."
+  fi
+
+  handle_celestia
+
+  # TODO: Check .env file differences like git diff
+  read -rp "The .env file will be created or updated. Continue? (y/n): " confirm_run
+  if [[ "$confirm_run" == "y" ]]; then
+    echo "Generating .env and running docker compose up..."
+    create_env_file
+    ./run
+  else
+    echo -e "${RED}Launch canceled.${NC}"
+  fi
 }
 
 launch_existing_opstack_node() {
@@ -424,6 +537,17 @@ launch_existing_opstack_node() {
   fi
 }
 
+backup_opstack_deployment() {
+  echo -e "${GREEN}Backing up OP Stack deployment...${NC}"
+  read -rp "Enter archive file name (tar.gz): " archive_name
+
+  if [[ ! $archive_name =~ \.tar\.gz$ ]]; then
+    archive_name="${archive_name}.tar.gz"
+  fi
+
+  ./backup "$archive_name"
+}
+
 main() {
   echo "###################################################################################"
   echo "#              Welcome to opstack-compose OP Stack launcher by Upnode             #"
@@ -446,7 +570,7 @@ main() {
         break
         ;;
       "Backup OP stack deployment config")
-        echo "Not implemented yet."
+        backup_opstack_deployment
         break
         ;;
       *) echo -e "${RED}Invalid option $REPLY${NC}";;
