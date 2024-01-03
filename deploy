@@ -5,7 +5,6 @@ GREEN='\e[0;32m'
 YELLOW='\e[0;33m'
 CYAN='\e[0;36m'
 PURPLE='\e[0;34m'
-GREY='\e[0;2m'
 NC='\e[0m'
 
 config_path=data/configurations
@@ -18,7 +17,7 @@ set -e
 
 check_existing_deployment() {
   if [ -d "$config_path" ] && [ "$(ls -A $config_path)" ]; then
-    echo -ne "${YELLOW}WARNING${NC}: There is an existing OP Stack deployment. Would you like to ${RED}ERASE all data${NC} and continue? (y/n): "; read erase_decision
+    echo -ne "${YELLOW}WARNING${NC}: There is an existing OP Stack deployment. Would you like to ${RED}ERASE all data${NC} and continue? (y/n): "; read -r erase_decision
     if [[ "$erase_decision" == "y" ]]; then
       echo -e "${RED}Cleaning existing OP Stack deployment...${NC}"
       rm -rf ./data/*
@@ -71,12 +70,13 @@ display_addresses() {
   for arg in "$@"; do
     local label="${arg%%:*}:"
     local address="${arg#*:}"
-    [ ${#label} -gt $max_label_width ] && max_label_width=${#label}
-    [ ${#address} -gt $address_width ] && address_width=${#address}
+    [ ${#label} -gt "$max_label_width" ] && max_label_width=${#label}
+    [ ${#address} -gt "$address_width" ] && address_width=${#address}
   done
 
   local border_length=$((max_label_width + address_width + 4))
-  local border=$(printf '%*s\n' "${border_length}" '' | tr ' ' '-')
+  local border
+  border=$(printf '%*s\n' "${border_length}" '' | tr ' ' '-')
 
   echo -e "${CYAN}${border}${NC}"
   for arg in "$@"; do
@@ -88,32 +88,32 @@ display_addresses() {
 }
 
 handle_aws_secrets() {
-  read -p "Are you using AWS Secret Manager? (y/n): " aws_decision
+  read -rp "Are you using AWS Secret Manager? (y/n): " aws_decision
   if [[ "$aws_decision" == "y" ]]; then
-    read -p "AWS Secrets Manager ARN: " AWS_SECRET_ARN
-    read -p "AWS Secrets Manager Region: " AWS_SECRET_REGION
-    read -p "AWS Key ID: " AWS_KEY_ID
-    read -p "AWS Secret: " AWS_SECRET
+    read -rp "AWS Secrets Manager ARN: " AWS_SECRET_ARN
+    read -rp "AWS Secrets Manager Region: " AWS_SECRET_REGION
+    read -rp "AWS Key ID: " AWS_KEY_ID
+    read -rp "AWS Secret: " AWS_SECRET
 
     if [ -z "$AWS_SECRET_ARN" ] || [ -z "$AWS_SECRET_REGION" ] || [ -z "$AWS_KEY_ID" ] || [ -z "$AWS_SECRET" ]; then
       echo "AWS Secret Manager ARN, AWS Secret Manager Region, AWS Key ID, AWS Secret are required."
       exit 1
     fi
 
-    read -p "Admin private key: " ADMIN_PRIVATE_KEY
+    read -rp "Admin private key: " ADMIN_PRIVATE_KEY
     get_address "ADMIN"
     display_addresses "Admin Address:$ADMIN_ADDRESS"
   else
-    read -p "Admin private key: " ADMIN_PRIVATE_KEY
+    read -rp "Admin private key: " ADMIN_PRIVATE_KEY
     get_address "ADMIN"
 
-    read -p "Batcher private key: " BATCHER_PRIVATE_KEY
+    read -rp "Batcher private key: " BATCHER_PRIVATE_KEY
     get_address "BATCHER"
 
-    read -p "Proposer private key: " PROPOSER_PRIVATE_KEY
+    read -rp "Proposer private key: " PROPOSER_PRIVATE_KEY
     get_address "PROPOSER"
 
-    read -p "Sequencer private key: " SEQUENCER_PRIVATE_KEY
+    read -rp "Sequencer private key: " SEQUENCER_PRIVATE_KEY
     get_address "SEQUENCER"
 
     display_addresses "Admin Address:$ADMIN_ADDRESS" "Batcher Address:$BATCHER_ADDRESS" "Proposer Address:$PROPOSER_ADDRESS" "Sequencer Address:$SEQUENCER_ADDRESS"
@@ -146,9 +146,9 @@ handle_celestia() {
           esac
         done
 
-        read -p "Celestia target folder name (default: .celestia-light-mocha-4): " TARGET_FOLDER_NAME
+        read -rp "Celestia target folder name (default: .celestia-light-mocha-4): " TARGET_FOLDER_NAME
         TARGET_FOLDER_NAME=${TARGET_FOLDER_NAME:-.celestia-light-mocha-4}
-        read -p "Celestia keyring mnemonic: " CELESTIA_KEYRING_MNEMONIC
+        read -rp "Celestia keyring mnemonic: " CELESTIA_KEYRING_MNEMONIC
 
         [ -z "$CELESTIA_KEYRING_MNEMONIC" ] && echo "Celestia keyring mnemonic is required." && exit 1
 
@@ -297,21 +297,21 @@ EOF
 
 deploy_new_opstack() {
   check_existing_deployment
-  read -p "L1 RPC URL: " L1_RPC_URL
+  read -rp "L1 RPC URL: " L1_RPC_URL
 
   [ -z "$L1_RPC_URL" ] && echo "L1 RPC URL is required." && exit 1
 
   L1_CHAIN_ID=$(get_l1_chain_id "$L1_RPC_URL")
   L1_KIND=$(detect_l1_kind "$L1_RPC_URL" "$L1_CHAIN_ID")
   echo -e "L1 Chain ID: $L1_CHAIN_ID (Detected as ${GREEN}$L1_KIND${NC})"
-  read -p "L2 chain ID (default: 42069): " L2_CHAIN_ID
+  read -rp "L2 chain ID (default: 42069): " L2_CHAIN_ID
   L2_CHAIN_ID=${L2_CHAIN_ID:-42069}
 
-  read -p "Use custom optimism monorepo (default: $default_optimism_repo <-> $default_optimism_version)? (y/n): " custom_optimism_decision
+  read -rp "Use custom optimism monorepo (default: $default_optimism_repo <-> $default_optimism_version)? (y/n): " custom_optimism_decision
 
   if [[ "$custom_optimism_decision" == "y" ]]; then
-    read -p "Custom optimism monorepo URL: " CUSTOM_OPTIMISM_REPO
-    read -p "Custom optimism branch/tag/commit: " CUSTOM_OPTIMISM_BRANCH_OR_COMMIT
+    read -rp "Custom optimism monorepo URL: " CUSTOM_OPTIMISM_REPO
+    read -rp "Custom optimism branch/tag/commit: " CUSTOM_OPTIMISM_BRANCH_OR_COMMIT
 
     if [ -z "$CUSTOM_OPTIMISM_REPO" ] || [ -z "$CUSTOM_OPTIMISM_BRANCH_OR_COMMIT" ]; then
       echo "Custom optimism monorepo URL and branch/tag/commit are required."
@@ -319,11 +319,11 @@ deploy_new_opstack() {
     fi
   fi
 
-  read -p "Use custom op-geth repository (default: $default_opgeth_repo <-> $default_opgeth_version)? (y/n): " custom_opgeth_decision
+  read -rp "Use custom op-geth repository (default: $default_opgeth_repo <-> $default_opgeth_version)? (y/n): " custom_opgeth_decision
 
   if [[ "$custom_opgeth_decision" == "y" ]]; then
-    read -p "Custom op-geth monorepo URL: " CUSTOM_OPGETH_REPO
-    read -p "Custom op-geth branch/tag/commit: " CUSTOM_OPGETH_BRANCH_OR_COMMIT
+    read -rp "Custom op-geth monorepo URL: " CUSTOM_OPGETH_REPO
+    read -rp "Custom op-geth branch/tag/commit: " CUSTOM_OPGETH_BRANCH_OR_COMMIT
 
     if [ -z "$CUSTOM_OPGETH_REPO" ] || [ -z "$CUSTOM_OPGETH_BRANCH_OR_COMMIT" ]; then
       echo "Custom op-geth monorepo URL and branch/tag/commit are required."
@@ -331,11 +331,11 @@ deploy_new_opstack() {
     fi
   fi
 
-  read -p "Deploy config name (default: getting-started): " DEPLOY_CONFIG_NAME
+  read -rp "Deploy config name (default: getting-started): " DEPLOY_CONFIG_NAME
   DEPLOY_CONFIG_NAME=${DEPLOY_CONFIG_NAME:-getting-started}
   handle_aws_secrets
 
-  read -p "Deployer private key (default: ADMIN_PRIVATE_KEY): " DEPLOYER_PRIVATE_KEY
+  read -rp "Deployer private key (default: ADMIN_PRIVATE_KEY): " DEPLOYER_PRIVATE_KEY
   DEPLOYER_PRIVATE_KEY=${DEPLOYER_PRIVATE_KEY:-$ADMIN_PRIVATE_KEY}
   get_address "DEPLOYER"
   display_addresses "Deployer Address:$DEPLOYER_ADDRESS"
@@ -344,7 +344,7 @@ deploy_new_opstack() {
 
   handle_celestia
 
-  read -p "Confirm deployment? (y/n): " confirm_deployment
+  read -rp "Confirm deployment? (y/n): " confirm_deployment
   if [[ "$confirm_deployment" == "y" ]]; then
     echo "Generating .env and running docker compose up..."
     create_env_file
@@ -354,20 +354,23 @@ deploy_new_opstack() {
   fi
 }
 
+load_end() {
+  # shellcheck source=/dev/null
+  source .env
+}
+
 restore_existing_opstack_node() {
   echo "Not implemented yet."
 }
 
 launch_existing_opstack_node() {
-  need_to_restore=false
-
   if [ ! -f ".env" ]; then
     echo "File .env not found."
     restore_existing_opstack_node
     return
   fi
 
-  source .env
+  load_end
 
   if [ -z "$BATCHER_PRIVATE_KEY" ] || [ -z "$PROPOSER_PRIVATE_KEY" ] || [ -z "$SEQUENCER_PRIVATE_KEY" ]; then
     if [ -z "$AWS_SECRET_ARN" ] || [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ] || [ -z "$AWS_DEFAULT_REGION" ]; then
@@ -382,11 +385,11 @@ launch_existing_opstack_node() {
   echo -e "${PURPLE}SKIP_DEPLOYMENT_CHECK${NC}: $SKIP_DEPLOYMENT_CHECK ('true' skips checking all deployment components, only checks genesis.json and rollup.json. Suitable for RPC node)"
 
   echo -e "${YELLOW}NOTE${NC}: You can change these options if you select 'y'. Press Enter or type 'n' to skip."
-  read -p "Update these options in the .env file (y/n)? " update_decision
+  read -rp "Update these options in the .env file (y/n)? " update_decision
 
   if [[ "$update_decision" == "y" ]]; then
     for var in SEQUENCER_MODE SKIP_DEPLOYMENT_CHECK; do
-      read -p "$var (true/false): " value
+      read -rp "$var (true/false): " value
       if grep -q "^$var=" ".env"; then
         sed -i "s/^$var=.*/$var=$value/" ".env"
       else
@@ -395,7 +398,7 @@ launch_existing_opstack_node() {
     done
   fi
 
-  source .env
+  load_end
 
   if [ "$SKIP_DEPLOYMENT_CHECK" = "true" ]; then
     if [ -f "$config_path/genesis.json" ] && [ -f "$config_path/rollup.json" ]; then
