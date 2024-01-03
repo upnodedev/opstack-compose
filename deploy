@@ -30,6 +30,14 @@ check_existing_deployment() {
   fi
 }
 
+get_l1_chain_id() {
+  local rpc_url="$1"
+  local chain_id_hex
+  chain_id_hex="$(cast rpc eth_chainId --rpc-url "$rpc_url")" || exit 1
+  chain_id_hex="${chain_id_hex//\"/}"
+  echo "$((16#${chain_id_hex#*x}))"
+}
+
 detect_l1_kind() {
   local rpc_url="$1"
   local chain_id="$2"
@@ -39,14 +47,6 @@ detect_l1_kind() {
     *quicknode.com*|*quiknode.pro*) [ "$chain_id" -eq 1 ] && echo "quicknode" || echo "basic" ;;
     *) echo "basic" ;;
   esac
-}
-
-get_l1_chain_id() {
-  local rpc_url="$1"
-  local chain_id_hex
-  chain_id_hex="$(cast rpc eth_chainId --rpc-url "$rpc_url")" || exit 1
-  chain_id_hex="${chain_id_hex//\"/}"
-  echo "$((16#${chain_id_hex#*x}))"
 }
 
 get_address() {
@@ -173,11 +173,11 @@ SKIP_DEPLOYMENT_CHECK=$SKIP_DEPLOYMENT_CHECK
 # Repository configuration for optimism and op-geth
 # If not set, defaults to the official optimism implementation
 
-OPTIMISM_REPO_URL=$CUSTOM_OPTIMISM_REPO
-OPTIMISM_BRANCH_OR_COMMIT=$CUSTOM_OPTIMISM_BRANCH_OR_COMMIT
+OPTIMISM_REPO_URL=${CUSTOM_OPTIMISM_REPO:-$default_optimism_repo}
+OPTIMISM_BRANCH_OR_COMMIT=${CUSTOM_OPTIMISM_BRANCH_OR_COMMIT:-$default_optimism_version}
 
-OP_GETH_REPO_URL=$CUSTOM_OPGETH_REPO
-OP_GETH_BRANCH_OR_COMMIT=$CUSTOM_OPGETH_BRANCH_OR_COMMIT
+OP_GETH_REPO_URL=${CUSTOM_OPGETH_REPO:-$default_opgeth_repo}
+OP_GETH_BRANCH_OR_COMMIT=${CUSTOM_OPGETH_BRANCH_OR_COMMIT:-$default_opgeth_version}
 
 ##################################################
 #                 Accounts Info                  #
@@ -294,22 +294,28 @@ deploy_new_opstack() {
   read -p "L2 chain ID (default: 42069): " L2_CHAIN_ID
   L2_CHAIN_ID=${L2_CHAIN_ID:-42069}
 
-  read -p "Use custom optimism monorepo? (y/n): " custom_optimism_decision
+  read -p "Use custom optimism monorepo (default: $default_optimism_repo <-> $default_optimism_version)? (y/n): " custom_optimism_decision
 
   if [[ "$custom_optimism_decision" == "y" ]]; then
-    read -p "Custom optimism monorepo URL (default $default_optimism_repo): " CUSTOM_OPTIMISM_REPO
-    CUSTOM_OPTIMISM_REPO=${CUSTOM_OPTIMISM_REPO:-$default_optimism_repo}
-    read -p "Custom optimism branch/tag/commit (default $default_optimism_version): " CUSTOM_OPTIMISM_BRANCH_OR_COMMIT
-    CUSTOM_OPTIMISM_BRANCH_OR_COMMIT=${CUSTOM_OPTIMISM_BRANCH_OR_COMMIT:-$default_optimism_version}
+    read -p "Custom optimism monorepo URL: " CUSTOM_OPTIMISM_REPO
+    read -p "Custom optimism branch/tag/commit: " CUSTOM_OPTIMISM_BRANCH_OR_COMMIT
+
+    if [ -z "$CUSTOM_OPTIMISM_REPO" ] || [ -z "$CUSTOM_OPTIMISM_BRANCH_OR_COMMIT" ]; then
+      echo "Custom optimism monorepo URL and branch/tag/commit are required."
+      exit 1
+    fi
   fi
 
-  read -p "Use custom op-geth repository? (y/n): " custom_opgeth_decision
+  read -p "Use custom op-geth repository (default: $default_opgeth_repo <-> $default_opgeth_version)? (y/n): " custom_opgeth_decision
 
   if [[ "$custom_opgeth_decision" == "y" ]]; then
-    read -p "Custom op-geth monorepo URL (default $default_opgeth_repo): " CUSTOM_OPGETH_REPO
-    CUSTOM_OPGETH_REPO=${CUSTOM_OPGETH_REPO:-$default_opgeth_repo}
-    read -p "Custom op-geth branch/tag/commit (default $default_opgeth_version): " CUSTOM_OPGETH_BRANCH_OR_COMMIT
-    CUSTOM_OPGETH_BRANCH_OR_COMMIT=${CUSTOM_OPGETH_BRANCH_OR_COMMIT:-$default_opgeth_version}
+    read -p "Custom op-geth monorepo URL: " CUSTOM_OPGETH_REPO
+    read -p "Custom op-geth branch/tag/commit: " CUSTOM_OPGETH_BRANCH_OR_COMMIT
+
+    if [ -z "$CUSTOM_OPGETH_REPO" ] || [ -z "$CUSTOM_OPGETH_BRANCH_OR_COMMIT" ]; then
+      echo "Custom op-geth monorepo URL and branch/tag/commit are required."
+      exit 1
+    fi
   fi
 
   read -p "Deploy config name (default: getting-started): " DEPLOY_CONFIG_NAME
