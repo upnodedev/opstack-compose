@@ -8,5 +8,5 @@ fi
 
 # Create backup
 echo "Creating backup..."
-tar -czvf "$1" --exclude='optimism' --exclude='op-geth' --exclude='bin' --exclude='datadir' -C ./data .
+tar -czvf "$1" --exclude='optimism' --exclude='op-geth' --exclude='bin' --exclude='datadir' --exclude='celestia' -C ./data .
 echo "Backup created: $1"

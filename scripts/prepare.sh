@@ -43,14 +43,14 @@ if [ "$SKIP_DEPLOYMENT_CHECK" = "true" ]; then
 fi
 
 # Check if all required components exist
-if [ -f "$CONFIG_PATH/deploy-config.json" ] && [ -f "$CONFIG_PATH/jwt.txt" ] && [ -f "$CONFIG_PATH/genesis.json" ] && [ -f "$CONFIG_PATH/rollup.json" ] && [ -d "$DEPLOYMENT_DIR" ]; then
+if [ -f "$CONFIG_PATH/genesis.json" ] && [ -f "$CONFIG_PATH/rollup.json" ] && [ -f "$CONFIG_PATH/jwt.txt" ] && [ -f "$CONFIG_PATH/deploy-config.json" ] && [ -d "$DEPLOYMENT_DIR" ]; then
   echo "All required components are present, skipping script."
   exec "$@"
   exit 0
 fi
 
 # Check if at least one required component exists but not all
-if [ -f "$CONFIG_PATH/deploy-config.json" ] || [ -f "$CONFIG_PATH/jwt.txt" ] || [ -f "$CONFIG_PATH/genesis.json" ] || [ -f "$CONFIG_PATH/rollup.json" ] || [ -d "$DEPLOYMENT_DIR" ]; then
+if [ -f "$CONFIG_PATH/genesis.json" ] || [ -f "$CONFIG_PATH/rollup.json" ] || [ -f "$CONFIG_PATH/jwt.txt" ] || [ -f "$CONFIG_PATH/deploy-config.json" ] || [ -d "$DEPLOYMENT_DIR" ]; then
   echo "Error: Partial components are present, but not all. Exiting script."
   exit 1
 fi
