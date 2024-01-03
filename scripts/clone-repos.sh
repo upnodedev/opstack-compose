@@ -66,9 +66,9 @@ clone_repo() {
 
 # Use environment variables if set, otherwise default to the official repositories
 OPTIMISM_REPO=${OPTIMISM_REPO_URL:-https://github.com/ethereum-optimism/optimism.git}
-OPTIMISM_BRANCH_OR_COMMIT=${OPTIMISM_BRANCH_OR_COMMIT:-develop}
+OPTIMISM_BRANCH_OR_COMMIT=${OPTIMISM_BRANCH_OR_COMMIT:-op-node/v1.3.0}
 OP_GETH_REPO=${OP_GETH_REPO_URL:-https://github.com/ethereum-optimism/op-geth.git}
-OP_GETH_BRANCH_OR_COMMIT=${OP_GETH_BRANCH_OR_COMMIT:-optimism}
+OP_GETH_BRANCH_OR_COMMIT=${OP_GETH_BRANCH_OR_COMMIT:-v1.101304.2}
 
 # Cloning repositories
 clone_repo "$OPTIMISM_REPO" "$OPTIMISM_BRANCH_OR_COMMIT" "$OPTIMISM_DIR" || exit 1
