@@ -359,6 +359,8 @@ restore_existing_opstack_node() {
 }
 
 launch_existing_opstack_node() {
+  need_to_restore=false
+
   if [ ! -f ".env" ]; then
     echo "File .env not found."
     restore_existing_opstack_node
@@ -375,31 +377,40 @@ launch_existing_opstack_node() {
     fi
   fi
 
-  echo -e "${PURPLE}SEQUENCER_MODE${NC} (If false - op-batcher/op-proposer are disabled and launch an RPC node for an existing OP Stack chain): ${SEQUENCER_MODE}"
-  echo -e "${PURPLE}SKIP_DEPLOYMENT_CHECK${NC} (Skip checking for the presence of deploy-config.json and deployment. Suitable for RPC node): ${SKIP_DEPLOYMENT_CHECK}"
+  echo "Your currently Global Configuration in .env:"
+  echo -e "${PURPLE}SEQUENCER_MODE${NC}: $SEQUENCER_MODE ('true' enables the sequencer, runs op-batcher/op-proposer, 'false' disables them and starts the RPC node)"
+  echo -e "${PURPLE}SKIP_DEPLOYMENT_CHECK${NC}: $SKIP_DEPLOYMENT_CHECK ('true' skips checking all deployment components, only checks genesis.json and rollup.json. Suitable for RPC node)"
 
-  read -p "Update these variables in your .env? " update_decision
+  echo -e "${YELLOW}NOTE${NC}: You can change these options if you select 'y'. Press Enter or type 'n' to skip."
+  read -p "Update these options in the .env file (y/n)? " update_decision
 
   if [[ "$update_decision" == "y" ]]; then
-    read -p "SEQUENCER_MODE (true/false): " SEQUENCER_MODE
-    read -p "SKIP_DEPLOYMENT_CHECK (true/false): " SKIP_DEPLOYMENT_CHECK
-
-    if grep -q "^SEQUENCER_MODE=" ".env"; then
-      sed -i "s/^SEQUENCER_MODE=.*/SEQUENCER_MODE=${SEQUENCER_MODE}/" ".env"
-    else
-      echo "SEQUENCER_MODE=${SEQUENCER_MODE}" >> ".env"
-    fi
-
-    if grep -q "^SKIP_DEPLOYMENT_CHECK=" ".env"; then
-      sed -i "s/^SKIP_DEPLOYMENT_CHECK=.*/SKIP_DEPLOYMENT_CHECK=${SKIP_DEPLOYMENT_CHECK}/" ".env"
-    else
-      echo "SKIP_DEPLOYMENT_CHECK=${SKIP_DEPLOYMENT_CHECK}" >> ".env"
-    fi
+    for var in SEQUENCER_MODE SKIP_DEPLOYMENT_CHECK; do
+      read -p "$var (true/false): " value
+      if grep -q "^$var=" ".env"; then
+        sed -i "s/^$var=.*/$var=$value/" ".env"
+      else
+        echo "$var=$value" >> ".env"
+      fi
+    done
   fi
 
-  if [ ! -f "$CONFIG_PATH/deploy-config.json" ] || [ ! -f "$CONFIG_PATH/jwt.txt" ] || [ ! -f "$CONFIG_PATH/genesis.json" ] || [ ! -f "$CONFIG_PATH/rollup.json" ] || [ ! -d "$DEPLOYMENT_DIR" ]; then
-    echo "Required config files or deployment directory not found."
-    exit 1
+  source .env
+
+  if [ "$SKIP_DEPLOYMENT_CHECK" = "true" ]; then
+    if [ -f "$config_path/genesis.json" ] && [ -f "$config_path/rollup.json" ]; then
+      ./run
+    else
+      echo "Required config files (genesis.json, rollup.json) not found."
+      exit 1
+    fi
+  else
+    if [ -f "$config_path/genesis.json" ] && [ -f "$config_path/rollup.json" ] && [ -f "$config_path/deploy-config.json" ] && [ -d "data/deployments/$DEPLOYMENT_CONTEXT" ]; then
+      ./run
+    else
+      echo "Required config files (genesis.json, rollup.json, deploy-config.json) or deployment dir not found."
+      exit 1
+    fi
   fi
 }
 

@@ -16,7 +16,7 @@ BLUE='\e[0;34m'
 NC='\e[0m'
 
 if [ "$SKIP_DEPLOYMENT_CHECK" = "true" ]; then
-  echo -e "${ORANGE}WARNING${NC}: Only genesis.json and rollup.json will be checked (SKIP_DEPLOYMENT_CHECK=$SKIP_DEPLOYMENT_CHECK)."
+  echo -e "${ORANGE}NOTE${NC}: Only genesis.json and rollup.json will be checked (SKIP_DEPLOYMENT_CHECK=$SKIP_DEPLOYMENT_CHECK)."
 fi
 
 if [ "$SKIP_HEALTHCHECK" = "true" ]; then
