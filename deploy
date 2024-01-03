@@ -389,7 +389,14 @@ launch_existing_opstack_node() {
 
   if [[ "$update_decision" == "y" ]]; then
     for var in SEQUENCER_MODE SKIP_DEPLOYMENT_CHECK; do
-      read -rp "$var (true/false): " value
+      while true; do
+        read -rp "$var (true/false): " value
+        if [[ "$value" == "true" || "$value" == "false" ]]; then
+          break
+        else
+          echo "Invalid input. Please enter 'true' or 'false'."
+        fi
+      done
       if grep -q "^$var=" ".env"; then
         sed -i "s/^$var=.*/$var=$value/" ".env"
       else
@@ -405,14 +412,14 @@ launch_existing_opstack_node() {
       ./run
     else
       echo "Required config files (genesis.json, rollup.json) not found."
-      exit 1
+      restore_existing_opstack_node
     fi
   else
     if [ -f "$config_path/genesis.json" ] && [ -f "$config_path/rollup.json" ] && [ -f "$config_path/deploy-config.json" ] && [ -d "data/deployments/$DEPLOYMENT_CONTEXT" ]; then
       ./run
     else
       echo "Required config files (genesis.json, rollup.json, deploy-config.json) or deployment dir not found."
-      exit 1
+      restore_existing_opstack_node
     fi
   fi
 }
