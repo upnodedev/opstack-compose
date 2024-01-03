@@ -131,13 +131,26 @@ handle_celestia() {
         ;;
       "Celestia")
         CELESTIA_MODE=true
-        read -p "Celestia P2P network (mocha/celestia): " CELESTIA_P2P_NETWORK
+        echo "Select Celestia P2P network:"
+        select celestia_chain in "mocha" "celestia"; do
+          case $celestia_chain in
+            "mocha")
+              CELESTIA_P2P_NETWORK=mocha
+              break
+              ;;
+          "celestia")
+              CELESTIA_P2P_NETWORK=celestia
+              break
+              ;;
+            *) echo -e "${RED}Invalid option $REPLY${NC}";;
+          esac
+        done
+
+        read -p "Celestia target folder name (default: .celestia-light-mocha-4): " TARGET_FOLDER_NAME
+        TARGET_FOLDER_NAME=${TARGET_FOLDER_NAME:-.celestia-light-mocha-4}
         read -p "Celestia keyring mnemonic: " CELESTIA_KEYRING_MNEMONIC
 
-        if [ -z "$CELESTIA_P2P_NETWORK" ] || [ -z "$CELESTIA_KEYRING_MNEMONIC" ]; then
-          echo "Celestia P2P network and keyring mnemonic are required."
-          exit 1
-        fi
+        [ -z "$CELESTIA_KEYRING_MNEMONIC" ] && echo "Celestia keyring mnemonic is required." && exit 1
 
         echo -e "${YELLOW}NOTE${NC}: Remember to fund the Celestia wallet."
 
@@ -209,7 +222,7 @@ DEPLOYER_PRIVATE_KEY=$DEPLOYER_PRIVATE_KEY
 SKIP_HEALTHCHECK=false
 
 # Necessary because it's used in the build of the celestia-da service and in celestia.env/paths.env
-TARGET_FOLDER_NAME=${TARGET_FOLDER_NAME:-.celestia-light-mocha-4}
+TARGET_FOLDER_NAME=$TARGET_FOLDER_NAME
 # Necessary because it's used in the build of the celestia-da service and in celestia.env
 P2P_NETWORK=$CELESTIA_P2P_NETWORK
 
@@ -337,7 +350,7 @@ deploy_new_opstack() {
     create_env_file
     ./run
   else
-    echo "${RED}Deployment cancelled.${NC}"
+    echo -e "${RED}Deployment cancelled.${NC}"
   fi
 }
 
@@ -391,9 +404,9 @@ launch_existing_opstack_node() {
 }
 
 main() {
-  echo -e "###################################################################################"
-  echo -e "#              Welcome to opstack-compose OP Stack launcher by Upnode             #"
-  echo -e "###################################################################################"
+  echo "###################################################################################"
+  echo "#              Welcome to opstack-compose OP Stack launcher by Upnode             #"
+  echo "###################################################################################"
   echo ""
 
   PS3="Choose what you want to do: "
@@ -402,6 +415,8 @@ main() {
   do
     case $opt in
       "Deploy a new OP Stack chain")
+        SEQUENCER_MODE=true
+        SKIP_DEPLOYMENT_CHECK=false
         deploy_new_opstack
         break
         ;;
