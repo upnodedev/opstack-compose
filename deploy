@@ -18,7 +18,8 @@ set -e
 
 check_existing_deployment() {
   if [ -d "$config_path" ] && [ "$(ls -A $config_path)" ]; then
-    echo -ne "${YELLOW}WARNING${NC}: There is an existing OP Stack deployment. Would you like to ${RED}ERASE all data${NC} and continue? (y/n): "; read -r erase_decision
+    echo -ne "${YELLOW}WARNING${NC}: There is an existing OP Stack deployment. Would you like to ${RED}ERASE all data${NC} and continue? (y/n): "
+    read -r erase_decision
     if [[ "$erase_decision" == "y" ]]; then
       echo -e "${RED}Cleaning existing OP Stack deployment...${NC}"
       rm -rf ./data/*
@@ -44,7 +45,7 @@ detect_l1_kind() {
 
   case "$rpc_url" in
     *alchemy.com*) echo "alchemy" ;;
-    *quicknode.com*|*quiknode.pro*) [ "$chain_id" -eq 1 ] && echo "quicknode" || echo "basic" ;;
+    *quicknode.com* | *quiknode.pro*) [ "$chain_id" -eq 1 ] && echo "quicknode" || echo "basic" ;;
     *) echo "basic" ;;
   esac
 }
@@ -143,7 +144,7 @@ handle_celestia() {
               CELESTIA_P2P_NETWORK=celestia
               break
               ;;
-            *) echo -e "${RED}Invalid option $REPLY${NC}";;
+            *) echo -e "${RED}Invalid option $REPLY${NC}" ;;
           esac
         done
 
@@ -162,7 +163,7 @@ handle_celestia() {
 
         break
         ;;
-      *) echo -e "${RED}Invalid option $REPLY${NC}";;
+      *) echo -e "${RED}Invalid option $REPLY${NC}" ;;
     esac
   done
 }
@@ -451,7 +452,7 @@ restore_existing_opstack_node() {
         fi
         break
         ;;
-      *) echo -e "${RED}Invalid option $REPLY${NC}";;
+      *) echo -e "${RED}Invalid option $REPLY${NC}" ;;
     esac
   done
 
@@ -556,8 +557,7 @@ main() {
 
   PS3="Choose what you want to do: "
   options=("Deploy a new OP Stack chain" "Launch a node for an existing OP Stack chain" "Backup OP stack deployment config")
-  select opt in "${options[@]}"
-  do
+  select opt in "${options[@]}"; do
     case $opt in
       "Deploy a new OP Stack chain")
         SEQUENCER_MODE=true
@@ -573,7 +573,7 @@ main() {
         backup_opstack_deployment
         break
         ;;
-      *) echo -e "${RED}Invalid option $REPLY${NC}";;
+      *) echo -e "${RED}Invalid option $REPLY${NC}" ;;
     esac
   done
 }

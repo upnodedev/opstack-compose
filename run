@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Load environment variables from .env file
+# shellcheck disable=SC1091
 source .env
 
 # Initialize the command
@@ -27,9 +28,10 @@ fi
 command+=" up --build -d"
 
 # Confirm before running the command
-echo -ne "About to run: ${BLUE}$command${NC} (SEQUENCER_MODE: $SEQUENCER_MODE, CELESTIA_MODE: $CELESTIA_MODE). Do you want to continue? (yes/no): "; read confirm
+echo -ne "About to run: ${BLUE}$command${NC} (SEQUENCER_MODE: $SEQUENCER_MODE, CELESTIA_MODE: $CELESTIA_MODE). Do you want to continue? (yes/no): "
+read -r confirm
 if [[ "$confirm" =~ ^(yes|y)$ ]]; then
-  eval $command
+  eval "$command"
 else
   echo "Command execution cancelled."
 fi
