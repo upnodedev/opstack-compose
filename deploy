@@ -264,7 +264,7 @@ PASSWORD=
 ##################################################
 
 # Used in opproposer.env
-L2OO_ADDRESS=
+L2OO_ADDRESS=$L2OO_ADDRESS
 
 ##################################################
 #               Contract Deployment              #
@@ -339,9 +339,11 @@ set_deploy_config_name() {
 }
 
 set_l2oo_address() {
-  if [ ! -f "data/deployments/$DEPLOY_CONFIG_NAME/L2OutputOracleProxy.json" ]; then
+  if [ ! -f "data/deployments/$DEPLOY_CONFIG_NAME/L2OutputOracleProxy.json" ] && [ -z "$L2OO_ADDRESS" ]; then
+    echo -e "${YELLOW}WARNING${NC}: data/deployments/$DEPLOY_CONFIG_NAME/L2OutputOracleProxy.json doesn't exist and L2OO_ADDRESS is not set in .env."
     read -rp "Op proposer L2OO_ADDRESS: " L2OO_ADDRESS
     [ -z "$L2OO_ADDRESS" ] && echo "L2OO_ADDRESS is required." && exit 1
+    export L2OO_ADDRESS
   fi
 }
 
@@ -435,7 +437,20 @@ restore_existing_opstack_node() {
   echo -e "${GREEN}Restoring existing OP Stack node...${NC}"
   set_basic_settings
 
-  restore_configurations
+  if [ "$1" == "true" ]; then
+    echo "Set SEQUENCER_MODE ('true' enables the sequencer, runs op-batcher/op-proposer, 'false' disables them and starts the RPC node)"
+    read -rp "SEQUENCER_MODE (true/false): " SEQUENCER_MODE
+    if [[ "$SEQUENCER_MODE" != "true" && "$SEQUENCER_MODE" != "false" ]]; then
+      echo "Invalid input. Please enter 'true' or 'false'."
+      exit 1
+    fi
+  fi
+
+  if [ ! -f "$config_path/genesis.json" ] && [ ! -f "$config_path/rollup.json" ]; then
+    restore_configurations
+  else
+    echo -e "${YELLOW}NOTE${NC}: The configuration files already exist. Skip restore_configurations..."
+  fi
 
   if [ "$SEQUENCER_MODE" == "true" ]; then
     set_deploy_config_name
@@ -451,7 +466,13 @@ restore_existing_opstack_node() {
   read -rp "The .env file will be created or updated. Continue? (y/n): " confirm_run
   if [[ "$confirm_run" == "y" ]]; then
     echo "Generating .env and running docker compose up..."
+
+    if [ -f ".env" ]; then
+      cp .env .env.backup
+    fi
+
     create_env_file
+
     ./run
   else
     echo -e "${RED}Launch canceled.${NC}"
@@ -461,7 +482,7 @@ restore_existing_opstack_node() {
 launch_existing_opstack_node() {
   if [ ! -f ".env" ]; then
     echo "File .env not found."
-    restore_existing_opstack_node
+    restore_existing_opstack_node true
     return
   fi
 
@@ -501,7 +522,8 @@ launch_existing_opstack_node() {
       fi
     fi
 
-    if [ ! -f "data/deployments/$DEPLOY_CONFIG_NAME/L2OutputOracleProxy.json" ] && [ -z "$L2OO_ADDRESS" ]; then
+    if [ ! -f "data/deployments/$DEPLOYMENT_CONTEXT/L2OutputOracleProxy.json" ] && [ -z "$L2OO_ADDRESS" ]; then
+      echo -e "${YELLOW}WARNING${NC}: data/deployments/$DEPLOYMENT_CONTEXT/L2OutputOracleProxy.json doesn't exist and L2OO_ADDRESS is not set in .env."
       var="L2OO_ADDRESS"
       read -rp "$var: " value
       if grep -q "^$var=" ".env"; then
@@ -511,6 +533,8 @@ launch_existing_opstack_node() {
       fi
     fi
   fi
+
+  load_end
 
   if [ -f "$config_path/genesis.json" ] && [ -f "$config_path/rollup.json" ]; then
     ./run
