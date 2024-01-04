@@ -462,7 +462,6 @@ restore_existing_opstack_node() {
 
   handle_celestia
 
-  # TODO: Check .env file differences like git diff
   read -rp "The .env file will be created or updated. Continue? (y/n): " confirm_run
   if [[ "$confirm_run" == "y" ]]; then
     echo "Generating .env and running docker compose up..."
