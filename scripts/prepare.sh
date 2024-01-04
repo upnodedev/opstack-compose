@@ -28,30 +28,15 @@ if [ ! -f "$BIN_DIR/op-node" ] || [ ! -f "$BIN_DIR/op-batcher" ] || [ ! -f "$BIN
 fi
 
 # Create jwt.txt if it does not exist
-if [ ! -f "$CONFIG_PATH/jwt.txt" ]; then
-  openssl rand -hex 32 > "$CONFIG_PATH"/jwt.txt
-fi
+[ -f "$CONFIG_PATH/jwt.txt" ] || openssl rand -hex 32 > "$CONFIG_PATH"/jwt.txt
 
-# Check if SKIP_DEPLOYMENT_CHECK is set to true
-if [ "$SKIP_DEPLOYMENT_CHECK" = "true" ]; then
-  # Check if only genesis.json and rollup.json exist
-  if [ -f "$CONFIG_PATH/genesis.json" ] && [ -f "$CONFIG_PATH/rollup.json" ] && [ -f "$CONFIG_PATH/jwt.txt" ]; then
-    echo "L2 config files are present, skipping script."
-    exec "$@"
-    exit 0
-  fi
-fi
-
-# Check if all required components exist
-if [ -f "$CONFIG_PATH/genesis.json" ] && [ -f "$CONFIG_PATH/rollup.json" ] && [ -f "$CONFIG_PATH/jwt.txt" ] && [ -f "$CONFIG_PATH/deploy-config.json" ] && [ -d "$DEPLOYMENT_DIR" ]; then
-  echo "All required components are present, skipping script."
+# Check if all required config files exist
+if [ -f "$CONFIG_PATH/genesis.json" ] && [ -f "$CONFIG_PATH/rollup.json" ]; then
+  echo "L2 config files are present, skipping script."
   exec "$@"
   exit 0
-fi
-
-# Check if at least one required component exists but not all
-if [ -f "$CONFIG_PATH/genesis.json" ] || [ -f "$CONFIG_PATH/rollup.json" ] || [ -f "$CONFIG_PATH/jwt.txt" ] || [ -f "$CONFIG_PATH/deploy-config.json" ] || [ -d "$DEPLOYMENT_DIR" ]; then
-  echo "Error: Partial components are present, but not all. Exiting script."
+elif [ -f "$CONFIG_PATH/genesis.json" ] || [ -f "$CONFIG_PATH/rollup.json" ]; then
+  echo "Error: Partial L2 config files are present, but not all. Exiting script."
   exit 1
 fi
 

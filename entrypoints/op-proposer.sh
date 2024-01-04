@@ -12,7 +12,12 @@ fi
 
 # Check if OP_PROPOSER_L2OO_ADDRESS environment variable is set
 if [ -z "$OP_PROPOSER_L2OO_ADDRESS" ]; then
-  # If not set, use the address from the $DEPLOYMENT_DIR
+  # If not set, check if the file exists
+  if [ ! -f "$DEPLOYMENT_DIR/L2OutputOracleProxy.json" ]; then
+    echo "File $DEPLOYMENT_DIR/L2OutputOracleProxy.json does not exist. Please set the OP_PROPOSER_L2OO_ADDRESS variable."
+    exit 1
+  fi
+  # Use the address from the $DEPLOYMENT_DIR
   OP_PROPOSER_L2OO_ADDRESS=$(jq -r .address < "$DEPLOYMENT_DIR"/L2OutputOracleProxy.json)
 fi
 

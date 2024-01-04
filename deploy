@@ -1,5 +1,4 @@
 #!/bin/bash
-# TODO: It may be worth removing SKIP_DEPLOYMENT_CHECK in the future.
 
 RED='\e[0;31m'
 GREEN='\e[0;32m'
@@ -182,10 +181,6 @@ SEQUENCER_MODE=$SEQUENCER_MODE
 # 'false' disables the celestia-da service and uses Ethereum L1
 CELESTIA_MODE=$CELESTIA_MODE
 
-# SKIP_DEPLOYMENT_CHECK: 'true' skips checking all deployment components, only checks genesis.json and rollup.json
-# 'false' checks all components, including deploy-config.json and the deployment dir
-SKIP_DEPLOYMENT_CHECK=$SKIP_DEPLOYMENT_CHECK
-
 ##################################################
 #              Cloning Configuration             #
 ##################################################
@@ -302,8 +297,7 @@ AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION
 EOF
 }
 
-deploy_new_opstack() {
-  check_existing_deployment
+set_basic_settings() {
   read -rp "L1 RPC URL: " L1_RPC_URL
 
   [ -z "$L1_RPC_URL" ] && echo "L1 RPC URL is required." && exit 1
@@ -337,15 +331,35 @@ deploy_new_opstack() {
       exit 1
     fi
   fi
+}
 
+set_deploy_config_name() {
   read -rp "Deploy config name (default: getting-started): " DEPLOY_CONFIG_NAME
   DEPLOY_CONFIG_NAME=${DEPLOY_CONFIG_NAME:-getting-started}
-  handle_aws_secrets
+}
 
+set_l2oo_address() {
+  if [ ! -f "data/deployments/$DEPLOY_CONFIG_NAME/L2OutputOracleProxy.json" ]; then
+    read -rp "Op proposer L2OO_ADDRESS: " L2OO_ADDRESS
+    [ -z "$L2OO_ADDRESS" ] && echo "L2OO_ADDRESS is required." && exit 1
+  fi
+}
+
+set_deployer_private_key() {
   read -rp "Deployer private key (default: ADMIN_PRIVATE_KEY): " DEPLOYER_PRIVATE_KEY
   DEPLOYER_PRIVATE_KEY=${DEPLOYER_PRIVATE_KEY:-$ADMIN_PRIVATE_KEY}
   get_address "DEPLOYER"
   display_addresses "Deployer Address:$DEPLOYER_ADDRESS"
+}
+
+deploy_new_opstack() {
+  check_existing_deployment
+  set_basic_settings
+
+  set_deploy_config_name
+  handle_aws_secrets
+
+  set_deployer_private_key
 
   echo -e "${YELLOW}NOTE${NC}: Remember to fund the admin, batcher, proposer, and deployer wallet."
 
@@ -366,43 +380,7 @@ load_end() {
   source .env
 }
 
-restore_existing_opstack_node() {
-  echo -e "${GREEN}Restoring existing OP Stack node...${NC}"
-  read -rp "L1 RPC URL: " L1_RPC_URL
-
-  [ -z "$L1_RPC_URL" ] && echo "L1 RPC URL is required." && exit 1
-
-  L1_CHAIN_ID=$(get_l1_chain_id "$L1_RPC_URL")
-  L1_KIND=$(detect_l1_kind "$L1_RPC_URL" "$L1_CHAIN_ID")
-  echo -e "L1 Chain ID: $L1_CHAIN_ID (Detected as ${GREEN}$L1_KIND${NC})"
-  read -rp "L2 chain ID (default: 42069): " L2_CHAIN_ID
-
-  L2_CHAIN_ID=${L2_CHAIN_ID:-42069}
-
-  read -rp "Use custom optimism monorepo (default: $default_optimism_repo <-> $default_optimism_version)? (y/n): " custom_optimism_decision
-
-  if [[ "$custom_optimism_decision" == "y" ]]; then
-    read -rp "Custom optimism monorepo URL: " CUSTOM_OPTIMISM_REPO
-    read -rp "Custom optimism branch/tag/commit: " CUSTOM_OPTIMISM_BRANCH_OR_COMMIT
-
-    if [ -z "$CUSTOM_OPTIMISM_REPO" ] || [ -z "$CUSTOM_OPTIMISM_BRANCH_OR_COMMIT" ]; then
-      echo "Custom optimism monorepo URL and branch/tag/commit are required."
-      exit 1
-    fi
-  fi
-
-  read -rp "Use custom op-geth repository (default: $default_opgeth_repo <-> $default_opgeth_version)? (y/n): " custom_opgeth_decision
-
-  if [[ "$custom_opgeth_decision" == "y" ]]; then
-    read -rp "Custom op-geth monorepo URL: " CUSTOM_OPGETH_REPO
-    read -rp "Custom op-geth branch/tag/commit: " CUSTOM_OPGETH_BRANCH_OR_COMMIT
-
-    if [ -z "$CUSTOM_OPGETH_REPO" ] || [ -z "$CUSTOM_OPGETH_BRANCH_OR_COMMIT" ]; then
-      echo "Custom op-geth monorepo URL and branch/tag/commit are required."
-      exit 1
-    fi
-  fi
-
+restore_configurations() {
   PS3="> "
   mkdir -p ./temp
   echo "How would you like to restore the configuration?"
@@ -426,39 +404,42 @@ restore_existing_opstack_node() {
         break
         ;;
       "Download each file from the internet")
-        if [ "$SKIP_DEPLOYMENT_CHECK" = "true" ]; then
-          read -rp "rollup.json file path / URL: " ROLLUP_JSON_PATH
-          if [[ $ROLLUP_JSON_PATH == http* ]]; then
-            temp_rollup_json="./temp/rollup.json"
-            echo "Downloading rollup.json from $ROLLUP_JSON_PATH..."
-            curl -o "$temp_rollup_json" "$ROLLUP_JSON_PATH"
-            ROLLUP_JSON_PATH="$temp_rollup_json"
-          fi
-
-          read -rp "genesis.json file path / URL: " GENESIS_JSON_PATH
-          if [[ $GENESIS_JSON_PATH == http* ]]; then
-            temp_genesis_json="./temp/genesis.json"
-            echo "Downloading genesis.json from $GENESIS_JSON_PATH..."
-            curl -o "$temp_genesis_json" "$GENESIS_JSON_PATH"
-            GENESIS_JSON_PATH="$temp_genesis_json"
-          fi
-
-          mkdir -p "$config_path"
-          mv "$ROLLUP_JSON_PATH" "$config_path/rollup.json"
-          mv "$GENESIS_JSON_PATH" "$config_path/genesis.json"
-          echo "Restore complete."
-        else
-          echo "This option is only available if SKIP_DEPLOYMENT_CHECK is true. Please select "Restore from opstack-compose backup archive"."
+        read -rp "rollup.json file path / URL: " ROLLUP_JSON_PATH
+        if [[ $ROLLUP_JSON_PATH == http* ]]; then
+          temp_rollup_json="./temp/rollup.json"
+          echo "Downloading rollup.json from $ROLLUP_JSON_PATH..."
+          curl -o "$temp_rollup_json" "$ROLLUP_JSON_PATH"
+          ROLLUP_JSON_PATH="$temp_rollup_json"
         fi
+
+        read -rp "genesis.json file path / URL: " GENESIS_JSON_PATH
+        if [[ $GENESIS_JSON_PATH == http* ]]; then
+          temp_genesis_json="./temp/genesis.json"
+          echo "Downloading genesis.json from $GENESIS_JSON_PATH..."
+          curl -o "$temp_genesis_json" "$GENESIS_JSON_PATH"
+          GENESIS_JSON_PATH="$temp_genesis_json"
+        fi
+
+        mkdir -p "$config_path"
+        mv "$ROLLUP_JSON_PATH" "$config_path/rollup.json"
+        mv "$GENESIS_JSON_PATH" "$config_path/genesis.json"
+        echo "Restore complete."
         break
         ;;
       *) echo -e "${RED}Invalid option $REPLY${NC}" ;;
     esac
   done
+}
+
+restore_existing_opstack_node() {
+  echo -e "${GREEN}Restoring existing OP Stack node...${NC}"
+  set_basic_settings
+
+  restore_configurations
 
   if [ "$SEQUENCER_MODE" == "true" ]; then
-    read -rp "Deploy config name (default: getting-started): " DEPLOY_CONFIG_NAME
-    DEPLOY_CONFIG_NAME=${DEPLOY_CONFIG_NAME:-getting-started}
+    set_deploy_config_name
+    set_l2oo_address
     handle_aws_secrets
   else
     echo "RPC node only. Skip setting up keys or AWS Secret Manager."
@@ -486,55 +467,56 @@ launch_existing_opstack_node() {
 
   load_end
 
-  if [ -z "$BATCHER_PRIVATE_KEY" ] || [ -z "$PROPOSER_PRIVATE_KEY" ] || [ -z "$SEQUENCER_PRIVATE_KEY" ]; then
-    if [ -z "$AWS_SECRET_ARN" ] || [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ] || [ -z "$AWS_DEFAULT_REGION" ]; then
-      echo "Either BATCHER_PRIVATE_KEY, PROPOSER_PRIVATE_KEY, SEQUENCER_PRIVATE_KEY or AWS_SECRET_ARN, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION are required."
-      restore_existing_opstack_node
-      return
+  echo "Your currently Global Configuration in .env:"
+  echo -e "${PURPLE}SEQUENCER_MODE${NC}: $SEQUENCER_MODE ('true' enables the sequencer, runs op-batcher/op-proposer, 'false' disables them and starts the RPC node)"
+
+  echo -e "${YELLOW}NOTE${NC}: You can change this option if you select 'y'. Press Enter or type 'n' to skip."
+  read -rp "Update this option in the .env file? (y/n)? " update_decision
+
+  if [[ "$update_decision" == "y" ]]; then
+    var="SEQUENCER_MODE"
+    while true; do
+      read -rp "$var (true/false): " value
+      if [[ "$value" == "true" || "$value" == "false" ]]; then
+        break
+      else
+        echo "Invalid input. Please enter 'true' or 'false'."
+      fi
+    done
+    if grep -q "^$var=" ".env"; then
+      sed -i "s/^$var=.*/$var=$value/" ".env"
+    else
+      echo "$var=$value" >> ".env"
     fi
   fi
 
-  echo "Your currently Global Configuration in .env:"
-  echo -e "${PURPLE}SEQUENCER_MODE${NC}: $SEQUENCER_MODE ('true' enables the sequencer, runs op-batcher/op-proposer, 'false' disables them and starts the RPC node)"
-  echo -e "${PURPLE}SKIP_DEPLOYMENT_CHECK${NC}: $SKIP_DEPLOYMENT_CHECK ('true' skips checking all deployment components, only checks genesis.json and rollup.json. Suitable for RPC node)"
+  load_end
 
-  echo -e "${YELLOW}NOTE${NC}: You can change these options if you select 'y'. Press Enter or type 'n' to skip."
-  read -rp "Update these options in the .env file (y/n)? " update_decision
+  if [ "$SEQUENCER_MODE" == "true" ]; then
+    if [ -z "$BATCHER_PRIVATE_KEY" ] || [ -z "$PROPOSER_PRIVATE_KEY" ] || [ -z "$SEQUENCER_PRIVATE_KEY" ]; then
+      if [ -z "$AWS_SECRET_ARN" ] || [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ] || [ -z "$AWS_DEFAULT_REGION" ]; then
+        echo "Either BATCHER_PRIVATE_KEY, PROPOSER_PRIVATE_KEY, SEQUENCER_PRIVATE_KEY or AWS_SECRET_ARN, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION are required."
+        restore_existing_opstack_node
+        return
+      fi
+    fi
 
-  if [[ "$update_decision" == "y" ]]; then
-    for var in SEQUENCER_MODE SKIP_DEPLOYMENT_CHECK; do
-      while true; do
-        read -rp "$var (true/false): " value
-        if [[ "$value" == "true" || "$value" == "false" ]]; then
-          break
-        else
-          echo "Invalid input. Please enter 'true' or 'false'."
-        fi
-      done
+    if [ ! -f "data/deployments/$DEPLOY_CONFIG_NAME/L2OutputOracleProxy.json" ] && [ -z "$L2OO_ADDRESS" ]; then
+      var="L2OO_ADDRESS"
+      read -rp "$var: " value
       if grep -q "^$var=" ".env"; then
         sed -i "s/^$var=.*/$var=$value/" ".env"
       else
         echo "$var=$value" >> ".env"
       fi
-    done
+    fi
   fi
 
-  load_end
-
-  if [ "$SKIP_DEPLOYMENT_CHECK" = "true" ]; then
-    if [ -f "$config_path/genesis.json" ] && [ -f "$config_path/rollup.json" ]; then
-      ./run
-    else
-      echo "Required config files (genesis.json, rollup.json) not found."
-      restore_existing_opstack_node
-    fi
+  if [ -f "$config_path/genesis.json" ] && [ -f "$config_path/rollup.json" ]; then
+    ./run
   else
-    if [ -f "$config_path/genesis.json" ] && [ -f "$config_path/rollup.json" ] && [ -f "$config_path/deploy-config.json" ] && [ -d "data/deployments/$DEPLOYMENT_CONTEXT" ]; then
-      ./run
-    else
-      echo "Required config files (genesis.json, rollup.json, deploy-config.json) or deployment dir not found."
-      restore_existing_opstack_node
-    fi
+    echo "Required config files (genesis.json, rollup.json) not found."
+    restore_existing_opstack_node
   fi
 }
 
@@ -561,7 +543,6 @@ main() {
     case $opt in
       "Deploy a new OP Stack chain")
         SEQUENCER_MODE=true
-        SKIP_DEPLOYMENT_CHECK=false
         deploy_new_opstack
         break
         ;;

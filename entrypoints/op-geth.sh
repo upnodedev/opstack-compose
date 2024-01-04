@@ -4,8 +4,8 @@
 if [ -d "$DATADIR_DIR" ] && [ -z "$(ls -A "$DATADIR_DIR")" ]; then
   echo "Initializing op-geth as $DATADIR_DIR is empty..."
 
-  # Creating password file and block signer key file only if PASSWORD and GETH_PASSWORD is set
-  if [ -n "$PASSWORD" ] && [ -n "$GETH_PASSWORD" ]; then
+  # Creating password file and block signer key file only if PASSWORD, GETH_PASSWORD is set and SEQUENCER_MODE is true
+  if [ -n "$PASSWORD" ] && [ -n "$GETH_PASSWORD" ] && [ "$SEQUENCER_MODE" = "true" ]; then
     echo "$PASSWORD" > "$DATADIR_DIR/password"
 
     # Check if SEQUENCER_PRIVATE_KEY environment variable is set
