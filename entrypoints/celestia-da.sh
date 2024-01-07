@@ -25,6 +25,8 @@ exec celestia-da light start \
   --da.grpc.namespace="$DA_GRPC_NAMESPACE" \
   --da.grpc.listen=0.0.0.0:26650 \
   --core.ip "$DA_CORE_IP" \
+  --core.rpc.port "${DA_CORE_RPC_PORT:-26657}"
+  --core.grpc.port "${DA_CORE_GRPC_PORT:-9090}"
   --p2p.network="$DA_P2P_NETWORK" \
   --keyring.accname="$ACCNAME" \
   --gateway
