@@ -1,0 +1,62 @@
+{
+  "finalSystemOwner": "0xC408d3b761EefCFbB83D8ADDE0d5AF29e0642F13",
+  "portalGuardian": "0xC408d3b761EefCFbB83D8ADDE0d5AF29e0642F13",
+
+  "l1StartingBlockTag": "0xbad18ee4584504c9f3784f534ce9272ccec05eee6ae39111eb7d4be294fec7c5",
+
+  "l1ChainID": 8453,
+  "l2ChainID": 8080808,
+  "l2BlockTime": 1,
+  "l1BlockTime": 2,
+
+  "maxSequencerDrift": 600,
+  "sequencerWindowSize": 3600,
+  "channelTimeout": 300,
+
+  "p2pSequencerAddress": "0x99FfBEaF54E5408Dcac600AE2Ce0Ab174d4fd582",
+  "batchInboxAddress": "0xff00000000000000000000000000000008080808",
+  "batchSenderAddress": "0x3DF6cc007fcE4bdB3f02E49f83fC5d49Fa5F4094",
+
+  "l2OutputOracleSubmissionInterval": 1800,
+  "l2OutputOracleStartingBlockNumber": 0,
+  "l2OutputOracleStartingTimestamp": 1703062093,
+
+  "l2OutputOracleProposer": "0xeaf55efCF781fDBEE2ac0b7bB0FB56b1A43eb254",
+  "l2OutputOracleChallenger": "0xC408d3b761EefCFbB83D8ADDE0d5AF29e0642F13",
+
+  "finalizationPeriodSeconds": 691200,
+
+  "proxyAdminOwner": "0xC408d3b761EefCFbB83D8ADDE0d5AF29e0642F13",
+  "baseFeeVaultRecipient": "0xC408d3b761EefCFbB83D8ADDE0d5AF29e0642F13",
+  "l1FeeVaultRecipient": "0xC408d3b761EefCFbB83D8ADDE0d5AF29e0642F13",
+  "sequencerFeeVaultRecipient": "0xC408d3b761EefCFbB83D8ADDE0d5AF29e0642F13",
+
+  "baseFeeVaultMinimumWithdrawalAmount": "0x8ac7230489e80000",
+  "l1FeeVaultMinimumWithdrawalAmount": "0x8ac7230489e80000",
+  "sequencerFeeVaultMinimumWithdrawalAmount": "0x8ac7230489e80000",
+  "baseFeeVaultWithdrawalNetwork": 0,
+  "l1FeeVaultWithdrawalNetwork": 0,
+  "sequencerFeeVaultWithdrawalNetwork": 0,
+
+  "gasPriceOracleOverhead": 1,
+  "gasPriceOracleScalar": 500000,
+
+  "enableGovernance": true,
+  "governanceTokenSymbol": "NOTUSED",
+  "governanceTokenName": "Not Used",
+  "governanceTokenOwner": "0xC408d3b761EefCFbB83D8ADDE0d5AF29e0642F13",
+
+  "l2GenesisBlockGasLimit": "0x3b9aca00",
+  "l2GenesisBlockBaseFeePerGas": "0x3b9aca00",
+  "l2GenesisRegolithTimeOffset": "0x0",
+  "l2GenesisCanyonTimeOffset": "0x0",
+
+  "eip1559Denominator": 250,
+  "eip1559DenominatorCanyon": 250,
+  "eip1559Elasticity": 6,
+
+  "systemConfigStartBlock": 0,
+
+  "requiredProtocolVersion": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "recommendedProtocolVersion": "0x0000000000000000000000000000000000000000000000000000000000000000"
+}
