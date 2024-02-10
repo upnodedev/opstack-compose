@@ -50,6 +50,8 @@ services:
       retries: 60
     stop_grace_period: 10m
     restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     profiles: ["celestia"]
 
   op-geth:
@@ -81,6 +83,8 @@ services:
       timeout: 10s
       retries: 15
     stop_grace_period: 1h
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
 
   op-node:
@@ -109,6 +113,8 @@ services:
       timeout: 10s
       retries: 5
     stop_grace_period: 10m
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
 
   op-batcher:
@@ -132,6 +138,8 @@ services:
       - "8548:8548"
     stop_grace_period: 1m30s
     restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     profiles: ["sequencer"]
 
   op-proposer:
@@ -156,4 +164,6 @@ services:
       - "8560:8560"
     stop_grace_period: 1m30s
     restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     profiles: ["sequencer"]
