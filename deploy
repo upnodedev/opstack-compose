@@ -1,0 +1,585 @@
+#!/bin/bash
+
+RED='\e[0;31m'
+GREEN='\e[0;32m'
+YELLOW='\e[0;33m'
+CYAN='\e[0;36m'
+PURPLE='\e[0;34m'
+NC='\e[0m'
+
+config_path=data/configurations
+default_optimism_repo=https://github.com/ethereum-optimism/optimism.git
+default_optimism_version=op-node/v1.3.0
+default_opgeth_repo=https://github.com/ethereum-optimism/op-geth.git
+default_opgeth_version=v1.101304.2
+
+set -e
+
+check_existing_deployment() {
+  if [ -d "$config_path" ] && [ "$(ls -A $config_path)" ]; then
+    echo -ne "${YELLOW}WARNING${NC}: There is an existing OP Stack deployment. Would you like to ${RED}ERASE all data${NC} and continue? (y/n): "
+    read -r erase_decision
+    if [[ "$erase_decision" == "y" ]]; then
+      echo -e "${RED}Cleaning existing OP Stack deployment...${NC}"
+      rm -rf ./data/*
+      echo -e "${GREEN}Cleaning complete.${NC}"
+    else
+      echo -e "${CYAN}Exiting without making changes.${NC}"
+      exit 0
+    fi
+  fi
+}
+
+get_l1_chain_id() {
+  local rpc_url="$1"
+  local chain_id_hex
+  chain_id_hex="$(cast rpc eth_chainId --rpc-url "$rpc_url")" || exit 1
+  chain_id_hex="${chain_id_hex//\"/}"
+  echo "$((16#${chain_id_hex#*x}))"
+}
+
+detect_l1_kind() {
+  local rpc_url="$1"
+  local chain_id="$2"
+
+  case "$rpc_url" in
+    *alchemy.com*) echo "alchemy" ;;
+    *quicknode.com* | *quiknode.pro*) [ "$chain_id" -eq 1 ] && echo "quicknode" || echo "basic" ;;
+    *) echo "basic" ;;
+  esac
+}
+
+get_address() {
+  local key_name=$1
+  local priv_key_var="${key_name}_PRIVATE_KEY"
+  local address_var="${key_name}_ADDRESS"
+
+  if [ -z "${!priv_key_var}" ]; then
+    echo "Private key for $key_name not provided."
+    return 1
+  fi
+
+  local address
+  address="$(cast wallet address --private-key "${!priv_key_var}")" || exit 1
+  eval "$address_var=$address"
+}
+
+display_addresses() {
+  local max_label_width=0
+  local address_width=0
+
+  for arg in "$@"; do
+    local label="${arg%%:*}:"
+    local address="${arg#*:}"
+    [ ${#label} -gt "$max_label_width" ] && max_label_width=${#label}
+    [ ${#address} -gt "$address_width" ] && address_width=${#address}
+  done
+
+  local border_length=$((max_label_width + address_width + 4))
+  local border
+  border=$(printf '%*s\n' "${border_length}" '' | tr ' ' '-')
+
+  echo -e "${CYAN}${border}${NC}"
+  for arg in "$@"; do
+    local label="${arg%%:*}:"
+    local address="${arg#*:}"
+    printf "${CYAN}| %-${max_label_width}s %s |${NC}\n" "$label" "$address"
+  done
+  echo -e "${CYAN}${border}${NC}"
+}
+
+handle_aws_secrets() {
+  read -rp "Are you using AWS Secret Manager? (y/n): " aws_decision
+  if [[ "$aws_decision" == "y" ]]; then
+    read -rp "AWS Secrets Manager ARN: " AWS_SECRET_ARN
+    read -rp "AWS Secrets Manager Region: " AWS_REGION
+    read -rp "AWS Key ID: " AWS_KEY_ID
+    read -rp "AWS Secret: " AWS_SECRET
+
+    if [ -z "$AWS_SECRET_ARN" ] || [ -z "$AWS_REGION" ] || [ -z "$AWS_KEY_ID" ] || [ -z "$AWS_SECRET" ]; then
+      echo "AWS Secret Manager ARN, AWS Secret Manager Region, AWS Key ID, AWS Secret are required."
+      exit 1
+    fi
+
+    read -rp "Admin private key: " ADMIN_PRIVATE_KEY
+    get_address "ADMIN"
+    display_addresses "Admin Address:$ADMIN_ADDRESS"
+  else
+    read -rp "Admin private key: " ADMIN_PRIVATE_KEY
+    get_address "ADMIN"
+
+    read -rp "Batcher private key: " BATCHER_PRIVATE_KEY
+    get_address "BATCHER"
+
+    read -rp "Proposer private key: " PROPOSER_PRIVATE_KEY
+    get_address "PROPOSER"
+
+    read -rp "Sequencer private key: " SEQUENCER_PRIVATE_KEY
+    get_address "SEQUENCER"
+
+    display_addresses "Admin Address:$ADMIN_ADDRESS" "Batcher Address:$BATCHER_ADDRESS" "Proposer Address:$PROPOSER_ADDRESS" "Sequencer Address:$SEQUENCER_ADDRESS"
+  fi
+}
+
+handle_celestia() {
+  PS3="> "
+  echo "Select data availability provider:"
+  select da_provider in "Ethereum L1" "Celestia"; do
+    case $da_provider in
+      "Ethereum L1")
+        CELESTIA_MODE=false
+        break
+        ;;
+      "Celestia")
+        CELESTIA_MODE=true
+        echo "Select Celestia P2P network:"
+        select celestia_chain in "mocha" "celestia"; do
+          case $celestia_chain in
+            "mocha")
+              CELESTIA_P2P_NETWORK=mocha
+              break
+              ;;
+            "celestia")
+              CELESTIA_P2P_NETWORK=celestia
+              break
+              ;;
+            *) echo -e "${RED}Invalid option $REPLY${NC}" ;;
+          esac
+        done
+
+        read -rp "Celestia target folder name (default: .celestia-light-mocha-4): " TARGET_FOLDER_NAME
+        TARGET_FOLDER_NAME=${TARGET_FOLDER_NAME:-.celestia-light-mocha-4}
+
+        if [ "$SEQUENCER_MODE" == "false" ]; then
+          CELESTIA_KEYRING_MNEMONIC="test test test test test test test test test test test junk"
+          echo "Using dummy mnemonic for RPC node."
+        else
+          read -rp "Celestia keyring mnemonic: " CELESTIA_KEYRING_MNEMONIC
+          [ -z "$CELESTIA_KEYRING_MNEMONIC" ] && echo "Celestia keyring mnemonic is required." && exit 1
+        fi
+
+        echo -e "${YELLOW}NOTE${NC}: Remember to fund the Celestia wallet if you're running a sequencing node."
+
+        break
+        ;;
+      *) echo -e "${RED}Invalid option $REPLY${NC}" ;;
+    esac
+  done
+}
+
+create_env_file() {
+  cat <<EOF >.env
+##################################################
+#              Global Configuration              #
+##################################################
+
+# SEQUENCER_MODE: 'true' enables the sequencer, runs op-batcher/op-proposer
+# 'false' disables them and starts the RPC node
+SEQUENCER_MODE=$SEQUENCER_MODE
+
+# CELESTIA_MODE: 'true' uses Celestia as data availability (runs the celestia-da service)
+# 'false' disables the celestia-da service and uses Ethereum L1
+CELESTIA_MODE=$CELESTIA_MODE
+
+##################################################
+#              Cloning Configuration             #
+##################################################
+
+# Repository configuration for optimism and op-geth
+# If not set, defaults to the official optimism implementation
+
+OPTIMISM_REPO_URL=${CUSTOM_OPTIMISM_REPO:-$default_optimism_repo}
+OPTIMISM_BRANCH_OR_COMMIT=${CUSTOM_OPTIMISM_BRANCH_OR_COMMIT:-$default_optimism_version}
+
+OP_GETH_REPO_URL=${CUSTOM_OPGETH_REPO:-$default_opgeth_repo}
+OP_GETH_BRANCH_OR_COMMIT=${CUSTOM_OPGETH_BRANCH_OR_COMMIT:-$default_opgeth_version}
+
+##################################################
+#                 Accounts Info                  #
+##################################################
+
+# Admin account
+ADMIN_PRIVATE_KEY=$ADMIN_PRIVATE_KEY
+
+# Batcher account
+BATCHER_PRIVATE_KEY=$BATCHER_PRIVATE_KEY
+
+# Proposer account
+PROPOSER_PRIVATE_KEY=$PROPOSER_PRIVATE_KEY
+
+# Sequencer account
+SEQUENCER_PRIVATE_KEY=$SEQUENCER_PRIVATE_KEY
+
+# Contract deployer account
+DEPLOYER_PRIVATE_KEY=$DEPLOYER_PRIVATE_KEY
+
+##################################################
+#              celestia-da Configuration         #
+##################################################
+
+# These variables are required when CELESTIA_MODE is true
+
+# Skips celestia-da light node sync check
+# In case the node cannot catch up with the last block for a long time
+SKIP_HEALTHCHECK=false
+
+# Necessary because it's used in the build of the celestia-da service and in celestia.env/paths.env
+TARGET_FOLDER_NAME=$TARGET_FOLDER_NAME
+# Necessary because it's used in the build of the celestia-da service and in celestia.env
+P2P_NETWORK=$CELESTIA_P2P_NETWORK
+
+# Used in celestia.env/paths.env
+CELESTIA_KEYRING_MNEMONIC="$CELESTIA_KEYRING_MNEMONIC"
+CELESTIA_ACCNAME=acc
+
+##################################################
+#              op-node Configuration             #
+##################################################
+
+# The kind of RPC provider used to inform optimal transactions receipts fetching.
+# Valid options: alchemy, quicknode, infura, parity, nethermind,
+# debug_geth, erigon, basic, any.
+L1_RPC_KIND=$L1_KIND
+
+# Used in opnode.env
+P2P_AGENT=
+P2P_ADVERTISE_IP=
+
+##################################################
+#              op-geth Configuration             #
+##################################################
+
+# The chain identifier for the L2 network
+L2_CHAIN_ID=$L2_CHAIN_ID
+
+# Used in opgeth.env
+MINER_ETHERBASE_ADDRESS=
+UNLOCK_ADDRESS=
+
+# If GETH_PASSWORD is set in opgeth.env
+PASSWORD=
+
+##################################################
+#              op-proposer Configuration         #
+##################################################
+
+# Used in opproposer.env
+L2OO_ADDRESS=$L2OO_ADDRESS
+
+##################################################
+#               Contract Deployment              #
+##################################################
+
+# RPC URL for the L1 network to interact with
+L1_RPC_URL=$L1_RPC_URL
+
+# Name for the deployed network
+DEPLOYMENT_CONTEXT=$DEPLOY_CONFIG_NAME
+
+# Optional Tenderly details for simulation link during deployment
+TENDERLY_PROJECT=
+TENDERLY_USERNAME=
+
+# Optional Etherscan API key for contract verification
+ETHERSCAN_API_KEY=
+
+##################################################
+#               AWS Credentials                  #
+##################################################
+
+# AWS Secrets Manager ARN
+AWS_SECRET_ARN=$AWS_SECRET_ARN
+
+# AWS Credentials
+AWS_ACCESS_KEY_ID=$AWS_KEY_ID
+AWS_SECRET_ACCESS_KEY=$AWS_SECRET
+AWS_DEFAULT_REGION=$AWS_REGION
+EOF
+}
+
+set_basic_settings() {
+  read -rp "L1 RPC URL: " L1_RPC_URL
+
+  [ -z "$L1_RPC_URL" ] && echo "L1 RPC URL is required." && exit 1
+
+  L1_CHAIN_ID=$(get_l1_chain_id "$L1_RPC_URL")
+  L1_KIND=$(detect_l1_kind "$L1_RPC_URL" "$L1_CHAIN_ID")
+  echo -e "L1 Chain ID: $L1_CHAIN_ID (Detected as ${GREEN}$L1_KIND${NC})"
+  read -rp "L2 chain ID (default: 42069): " L2_CHAIN_ID
+  L2_CHAIN_ID=${L2_CHAIN_ID:-42069}
+
+  read -rp "Use custom optimism monorepo (default: $default_optimism_repo <-> $default_optimism_version)? (y/n): " custom_optimism_decision
+
+  if [[ "$custom_optimism_decision" == "y" ]]; then
+    read -rp "Custom optimism monorepo URL: " CUSTOM_OPTIMISM_REPO
+    read -rp "Custom optimism branch/tag/commit: " CUSTOM_OPTIMISM_BRANCH_OR_COMMIT
+
+    if [ -z "$CUSTOM_OPTIMISM_REPO" ] || [ -z "$CUSTOM_OPTIMISM_BRANCH_OR_COMMIT" ]; then
+      echo "Custom optimism monorepo URL and branch/tag/commit are required."
+      exit 1
+    fi
+  fi
+
+  read -rp "Use custom op-geth repository (default: $default_opgeth_repo <-> $default_opgeth_version)? (y/n): " custom_opgeth_decision
+
+  if [[ "$custom_opgeth_decision" == "y" ]]; then
+    read -rp "Custom op-geth monorepo URL: " CUSTOM_OPGETH_REPO
+    read -rp "Custom op-geth branch/tag/commit: " CUSTOM_OPGETH_BRANCH_OR_COMMIT
+
+    if [ -z "$CUSTOM_OPGETH_REPO" ] || [ -z "$CUSTOM_OPGETH_BRANCH_OR_COMMIT" ]; then
+      echo "Custom op-geth monorepo URL and branch/tag/commit are required."
+      exit 1
+    fi
+  fi
+}
+
+set_deploy_config_name() {
+  read -rp "Deploy config name (default: getting-started): " DEPLOY_CONFIG_NAME
+  DEPLOY_CONFIG_NAME=${DEPLOY_CONFIG_NAME:-getting-started}
+}
+
+set_l2oo_address() {
+  if [ ! -f "data/deployments/$DEPLOY_CONFIG_NAME/L2OutputOracleProxy.json" ] && [ -z "$L2OO_ADDRESS" ]; then
+    echo -e "${YELLOW}WARNING${NC}: data/deployments/$DEPLOY_CONFIG_NAME/L2OutputOracleProxy.json doesn't exist and L2OO_ADDRESS is not set in .env."
+    read -rp "Op proposer L2OO_ADDRESS: " L2OO_ADDRESS
+    [ -z "$L2OO_ADDRESS" ] && echo "L2OO_ADDRESS is required." && exit 1
+    export L2OO_ADDRESS
+  fi
+}
+
+set_deployer_private_key() {
+  read -rp "Deployer private key (default: ADMIN_PRIVATE_KEY): " DEPLOYER_PRIVATE_KEY
+  DEPLOYER_PRIVATE_KEY=${DEPLOYER_PRIVATE_KEY:-$ADMIN_PRIVATE_KEY}
+  get_address "DEPLOYER"
+  display_addresses "Deployer Address:$DEPLOYER_ADDRESS"
+}
+
+deploy_new_opstack() {
+  check_existing_deployment
+  set_basic_settings
+
+  set_deploy_config_name
+  handle_aws_secrets
+
+  set_deployer_private_key
+
+  echo -e "${YELLOW}NOTE${NC}: Remember to fund the admin, batcher, proposer, and deployer wallet."
+
+  handle_celestia
+
+  read -rp "Confirm deployment? (y/n): " confirm_deployment
+  if [[ "$confirm_deployment" == "y" ]]; then
+    echo "Generating .env and running docker compose up..."
+    create_env_file
+    ./run
+  else
+    echo -e "${RED}Deployment cancelled.${NC}"
+  fi
+}
+
+load_end() {
+  # shellcheck disable=SC1091
+  source .env
+}
+
+restore_configurations() {
+  PS3="> "
+  mkdir -p ./temp
+  echo "How would you like to restore the configuration?"
+  select restore_option in "Restore from opstack-compose backup archive" "Download each file from the internet"; do
+    case $restore_option in
+      "Restore from opstack-compose backup archive")
+        read -rp "Backup archive file path / URL: " BACKUP_ARCHIVE_PATH
+        if [ -z "$BACKUP_ARCHIVE_PATH" ]; then
+          echo "Backup archive file path / URL is required."
+          exit 1
+        fi
+
+        if [[ $BACKUP_ARCHIVE_PATH == http* ]]; then
+          temp_backup_archive="./temp/backup_archive.tar.gz"
+          echo "Downloading backup archive from $BACKUP_ARCHIVE_PATH..."
+          curl -o "$temp_backup_archive" "$BACKUP_ARCHIVE_PATH"
+          BACKUP_ARCHIVE_PATH="$temp_backup_archive"
+        fi
+
+        ./restore "$BACKUP_ARCHIVE_PATH"
+        break
+        ;;
+      "Download each file from the internet")
+        read -rp "rollup.json file path / URL: " ROLLUP_JSON_PATH
+        if [[ $ROLLUP_JSON_PATH == http* ]]; then
+          temp_rollup_json="./temp/rollup.json"
+          echo "Downloading rollup.json from $ROLLUP_JSON_PATH..."
+          curl -o "$temp_rollup_json" "$ROLLUP_JSON_PATH"
+          ROLLUP_JSON_PATH="$temp_rollup_json"
+        fi
+
+        read -rp "genesis.json file path / URL: " GENESIS_JSON_PATH
+        if [[ $GENESIS_JSON_PATH == http* ]]; then
+          temp_genesis_json="./temp/genesis.json"
+          echo "Downloading genesis.json from $GENESIS_JSON_PATH..."
+          curl -o "$temp_genesis_json" "$GENESIS_JSON_PATH"
+          GENESIS_JSON_PATH="$temp_genesis_json"
+        fi
+
+        mkdir -p "$config_path"
+        mv "$ROLLUP_JSON_PATH" "$config_path/rollup.json"
+        mv "$GENESIS_JSON_PATH" "$config_path/genesis.json"
+        echo "Restore complete."
+        break
+        ;;
+      *) echo -e "${RED}Invalid option $REPLY${NC}" ;;
+    esac
+  done
+}
+
+restore_existing_opstack_node() {
+  echo -e "${GREEN}Restoring existing OP Stack node...${NC}"
+  set_basic_settings
+
+  if [ "$1" == "true" ]; then
+    echo "Set SEQUENCER_MODE ('true' enables the sequencer, runs op-batcher/op-proposer, 'false' disables them and starts the RPC node)"
+    read -rp "SEQUENCER_MODE (true/false): " SEQUENCER_MODE
+    if [[ "$SEQUENCER_MODE" != "true" && "$SEQUENCER_MODE" != "false" ]]; then
+      echo "Invalid input. Please enter 'true' or 'false'."
+      exit 1
+    fi
+  fi
+
+  if [ ! -f "$config_path/genesis.json" ] && [ ! -f "$config_path/rollup.json" ]; then
+    restore_configurations
+  else
+    echo -e "${YELLOW}NOTE${NC}: The configuration files already exist. Skip restore_configurations..."
+  fi
+
+  if [ "$SEQUENCER_MODE" == "true" ]; then
+    set_deploy_config_name
+    set_l2oo_address
+    handle_aws_secrets
+  else
+    echo "RPC node only. Skip setting up keys or AWS Secret Manager."
+  fi
+
+  handle_celestia
+
+  read -rp "The .env file will be created or updated. Continue? (y/n): " confirm_run
+  if [[ "$confirm_run" == "y" ]]; then
+    echo "Generating .env and running docker compose up..."
+
+    if [ -f ".env" ]; then
+      cp .env .env.backup
+    fi
+
+    create_env_file
+
+    ./run
+  else
+    echo -e "${RED}Launch canceled.${NC}"
+  fi
+}
+
+launch_existing_opstack_node() {
+  if [ ! -f ".env" ]; then
+    echo "File .env not found."
+    restore_existing_opstack_node true
+    return
+  fi
+
+  load_end
+
+  echo "Your currently Global Configuration in .env:"
+  echo -e "${PURPLE}SEQUENCER_MODE${NC}: $SEQUENCER_MODE ('true' enables the sequencer, runs op-batcher/op-proposer, 'false' disables them and starts the RPC node)"
+
+  echo -e "${YELLOW}NOTE${NC}: You can change this option if you select 'y'. Press Enter or type 'n' to skip."
+  read -rp "Update this option in the .env file? (y/n)? " update_decision
+
+  if [[ "$update_decision" == "y" ]]; then
+    var="SEQUENCER_MODE"
+    while true; do
+      read -rp "$var (true/false): " value
+      if [[ "$value" == "true" || "$value" == "false" ]]; then
+        break
+      else
+        echo "Invalid input. Please enter 'true' or 'false'."
+      fi
+    done
+    if grep -q "^$var=" ".env"; then
+      sed -i "s/^$var=.*/$var=$value/" ".env"
+    else
+      echo "$var=$value" >> ".env"
+    fi
+  fi
+
+  load_end
+
+  if [ "$SEQUENCER_MODE" == "true" ]; then
+    if [ -z "$BATCHER_PRIVATE_KEY" ] || [ -z "$PROPOSER_PRIVATE_KEY" ] || [ -z "$SEQUENCER_PRIVATE_KEY" ]; then
+      if [ -z "$AWS_SECRET_ARN" ] || [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ] || [ -z "$AWS_DEFAULT_REGION" ]; then
+        echo "Either BATCHER_PRIVATE_KEY, PROPOSER_PRIVATE_KEY, SEQUENCER_PRIVATE_KEY or AWS_SECRET_ARN, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION are required."
+        restore_existing_opstack_node
+        return
+      fi
+    fi
+
+    if [ ! -f "data/deployments/$DEPLOYMENT_CONTEXT/L2OutputOracleProxy.json" ] && [ -z "$L2OO_ADDRESS" ]; then
+      echo -e "${YELLOW}WARNING${NC}: data/deployments/$DEPLOYMENT_CONTEXT/L2OutputOracleProxy.json doesn't exist and L2OO_ADDRESS is not set in .env."
+      var="L2OO_ADDRESS"
+      read -rp "$var: " value
+      if grep -q "^$var=" ".env"; then
+        sed -i "s/^$var=.*/$var=$value/" ".env"
+      else
+        echo "$var=$value" >> ".env"
+      fi
+    fi
+  fi
+
+  load_end
+
+  if [ -f "$config_path/genesis.json" ] && [ -f "$config_path/rollup.json" ]; then
+    ./run
+  else
+    echo "Required config files (genesis.json, rollup.json) not found."
+    restore_existing_opstack_node
+  fi
+}
+
+backup_opstack_deployment() {
+  echo -e "${GREEN}Backing up OP Stack deployment...${NC}"
+  read -rp "Enter archive file name (tar.gz): " archive_name
+
+  if [[ ! $archive_name =~ \.tar\.gz$ ]]; then
+    archive_name="${archive_name}.tar.gz"
+  fi
+
+  ./backup "$archive_name"
+}
+
+main() {
+  echo "###################################################################################"
+  echo "#              Welcome to opstack-compose OP Stack launcher by Upnode             #"
+  echo "###################################################################################"
+  echo ""
+
+  PS3="Choose what you want to do: "
+  options=("Deploy a new OP Stack chain" "Launch a node for an existing OP Stack chain" "Backup OP stack deployment config")
+  select opt in "${options[@]}"; do
+    case $opt in
+      "Deploy a new OP Stack chain")
+        SEQUENCER_MODE=true
+        deploy_new_opstack
+        break
+        ;;
+      "Launch a node for an existing OP Stack chain")
+        launch_existing_opstack_node
+        break
+        ;;
+      "Backup OP stack deployment config")
+        backup_opstack_deployment
+        break
+        ;;
+      *) echo -e "${RED}Invalid option $REPLY${NC}" ;;
+    esac
+  done
+}
+
+main

@@ -1,2 +1,4 @@
 data
 .env
+.env.backup
+temp

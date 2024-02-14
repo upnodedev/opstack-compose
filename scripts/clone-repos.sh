@@ -16,7 +16,7 @@ clone_repo() {
     local remote_commit
     if git ls-remote --heads origin | grep -qE "refs/heads/$branch_or_commit$"; then
       # branch_or_commit is a branch
-      remote_commit=$(git rev-parse origin/$branch_or_commit)
+      remote_commit=$(git rev-parse origin/"$branch_or_commit")
     elif git ls-remote --tags origin | grep -qE "refs/tags/$branch_or_commit$"; then
       # branch_or_commit is a tag
       remote_commit=$(git rev-parse "refs/tags/$branch_or_commit^{commit}")
@@ -24,14 +24,15 @@ clone_repo() {
       # Verify if branch_or_commit is a valid commit hash
       if ! git cat-file -e "$branch_or_commit^{commit}" 2> /dev/null; then
         echo "Error: '$branch_or_commit' is not a valid branch, tag, or commit hash."
-        cd - > /dev/null
+        cd - > /dev/null || exit
         return 1
       fi
       # branch_or_commit is a commit hash
-      remote_commit=$(git rev-parse $branch_or_commit)
+      remote_commit=$(git rev-parse "$branch_or_commit")
     fi
 
-    local current_commit=$(git rev-parse HEAD)
+    local current_commit
+    current_commit=$(git rev-parse HEAD)
 
     if [ "$current_commit" != "$remote_commit" ]; then
       echo "Version mismatch. Clearing binaries and existing repository..."
@@ -46,7 +47,7 @@ clone_repo() {
         rm -rf ./{,.[!.],..?}*
       else
         echo "Repository in $dest_dir is already up to date."
-        cd - > /dev/null
+        cd - > /dev/null || exit
         return 0
       fi
     fi
@@ -61,14 +62,14 @@ clone_repo() {
   echo "Checking out to $branch_or_commit"
   git checkout "$branch_or_commit"
 
-  cd - > /dev/null
+  cd - > /dev/null || exit
 }
 
 # Use environment variables if set, otherwise default to the official repositories
 OPTIMISM_REPO=${OPTIMISM_REPO_URL:-https://github.com/ethereum-optimism/optimism.git}
-OPTIMISM_BRANCH_OR_COMMIT=${OPTIMISM_BRANCH_OR_COMMIT:-develop}
+OPTIMISM_BRANCH_OR_COMMIT=${OPTIMISM_BRANCH_OR_COMMIT:-op-node/v1.3.0}
 OP_GETH_REPO=${OP_GETH_REPO_URL:-https://github.com/ethereum-optimism/op-geth.git}
-OP_GETH_BRANCH_OR_COMMIT=${OP_GETH_BRANCH_OR_COMMIT:-optimism}
+OP_GETH_BRANCH_OR_COMMIT=${OP_GETH_BRANCH_OR_COMMIT:-v1.101304.2}
 
 # Cloning repositories
 clone_repo "$OPTIMISM_REPO" "$OPTIMISM_BRANCH_OR_COMMIT" "$OPTIMISM_DIR" || exit 1

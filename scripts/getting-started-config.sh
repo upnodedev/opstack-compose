@@ -25,7 +25,8 @@ timestamp=$(echo "$block" | awk '/timestamp/ { print $2 }')
 blockhash=$(echo "$block" | awk '/hash/ { print $2 }')
 
 # Generate the config file
-config=$(cat << EOL
+config=$(
+  cat <<EOL
 {
   "finalSystemOwner": "$GS_ADMIN_ADDRESS",
   "superchainConfigGuardian": "$GS_ADMIN_ADDRESS",

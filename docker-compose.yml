@@ -105,6 +105,7 @@ services:
       - opnode.env
     ports:
       - "8547:8547"
+      - "7300:7300"
       - "9221:9221/udp"
       - "9221:9221/tcp"
     healthcheck:
@@ -136,6 +137,7 @@ services:
       - opbatcher.env
     ports:
       - "8548:8548"
+      - "7301:7301"
     stop_grace_period: 1m30s
     restart: unless-stopped
     extra_hosts:

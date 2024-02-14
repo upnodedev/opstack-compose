@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Load environment variables from .env file
+# shellcheck disable=SC1091
 source .env
 
 # Initialize the command
@@ -11,12 +12,12 @@ command="docker compose"
 [ "$CELESTIA_MODE" = "true" ] && command+=" --profile celestia"
 
 # Define colors
-ORANGE='\033[0;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
+ORANGE='\e[0;33m'
+BLUE='\e[0;34m'
+NC='\e[0m'
 
 if [ "$SKIP_DEPLOYMENT_CHECK" = "true" ]; then
-  echo -e "${ORANGE}WARNING${NC}: Only genesis.json and rollup.json will be checked (SKIP_DEPLOYMENT_CHECK=$SKIP_DEPLOYMENT_CHECK)."
+  echo -e "${ORANGE}NOTE${NC}: Only genesis.json and rollup.json will be checked (SKIP_DEPLOYMENT_CHECK=$SKIP_DEPLOYMENT_CHECK)."
 fi
 
 if [ "$SKIP_HEALTHCHECK" = "true" ]; then
@@ -27,9 +28,10 @@ fi
 command+=" up --build -d"
 
 # Confirm before running the command
-echo -ne "About to run: ${BLUE}$command${NC} (SEQUENCER_MODE: $SEQUENCER_MODE, CELESTIA_MODE: $CELESTIA_MODE). Do you want to continue? (yes/no): "; read confirm
+echo -ne "About to run: ${BLUE}$command${NC} (SEQUENCER_MODE: $SEQUENCER_MODE, CELESTIA_MODE: $CELESTIA_MODE). Do you want to continue? (yes/no): "
+read -r confirm
 if [[ "$confirm" =~ ^(yes|y)$ ]]; then
-  eval $command
+  eval "$command"
 else
   echo "Command execution cancelled."
 fi

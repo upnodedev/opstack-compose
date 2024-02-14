@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Confirm with the user
-read -p "WARNING: This will clean up the data directory. Are you sure you want to proceed? (yes/no) " confirmation
+read -rp "WARNING: This will clean up the data directory. Are you sure you want to proceed? (yes/no) " confirmation
 
 if [ "$confirmation" != "yes" ] && [ "$confirmation" != "y" ]; then
   echo "Cleanup cancelled."
