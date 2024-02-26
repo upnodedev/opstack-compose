@@ -92,11 +92,6 @@ if [ -f "./deploy-config/$DEPLOYMENT_CONTEXT.json" ] && [ ! -f "/app/deploy-conf
   DEPLOY_CONFIG_CHECKSUM=$(md5sum "./deploy-config/$DEPLOYMENT_CONTEXT.json" | awk '{print $1}')
   if [ "$DEPLOY_CONFIG_CHECKSUM" == "cd4d5dd0b96826ca4c51716de6aad7e7" ]; then
     rm ./deploy-config/"$DEPLOYMENT_CONTEXT".json
-    if [ ! -f "./scripts/getting-started/config.sh" ]; then
-      mkdir -p ./scripts/getting-started
-      cp /app/getting-started-config.sh ./scripts/getting-started/config.sh
-      chmod +x ./scripts/getting-started/config.sh
-    fi
   else
     cp ./deploy-config/"$DEPLOYMENT_CONTEXT".json /app/deploy-config.json
   fi
@@ -111,6 +106,13 @@ if [ -f "/app/deploy-config.json" ]; then
 else
   # If deploy-config.json does not exist, use config.sh to generate it
   echo "Generating deploy-config.json..."
+
+  if [ ! -f "./scripts/getting-started/config.sh" ]; then
+    mkdir -p ./scripts/getting-started
+    cp /app/getting-started-config.sh ./scripts/getting-started/config.sh
+    chmod +x ./scripts/getting-started/config.sh
+  fi
+
   ./scripts/getting-started/config.sh
   if [ "./deploy-config/getting-started.json" != "./deploy-config/$DEPLOYMENT_CONTEXT.json" ]; then
     mv ./deploy-config/getting-started.json ./deploy-config/"$DEPLOYMENT_CONTEXT".json
