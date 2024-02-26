@@ -41,7 +41,7 @@ services:
         if [ \"$${SKIP_HEALTHCHECK}\" = \"true\" ]; then \
           curl -f http://localhost:26659/header/1; \
         else \
-          authToken=$$(celestia-da light auth admin --p2p.network $$DA_P2P_NETWORK) && \
+          authToken=$$(celestia-da ${CELESTIA_NODE_TYPE} auth admin --p2p.network $$DA_P2P_NETWORK) && \
           catch_up_done=$$(curl -s -X POST -H 'Content-Type: application/json' -H \"Authorization: Bearer $$authToken\" --data '{\"id\":1, \"jsonrpc\":\"2.0\", \"method\":\"das.SamplingStats\", \"params\":[]}' http://localhost:26658 | jq -r '.result.catch_up_done') && \
           [ \"$$catch_up_done\" = \"true\" ]; \
         fi"]
