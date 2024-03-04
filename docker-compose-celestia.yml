@@ -1,0 +1,40 @@
+version: '3.9'
+
+services:
+  celestia-da:
+    user: root
+    build:
+      context: .
+      dockerfile: Dockerfile.celestia
+    volumes:
+      - ./data/celestia:/home/celestia/${TARGET_FOLDER_NAME}/
+    command: ["/bin/bash", "-c", "/app/celestia-da.sh"]
+    env_file:
+      - .env
+      - paths.env
+      - celestia.env
+    expose:
+      - 26650
+    ports:
+      - "26659:26659"
+      - "26658:26658"
+    depends_on:
+      force-clone:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "\
+        if [ \"$${SKIP_HEALTHCHECK}\" = \"true\" ]; then \
+          curl -f http://localhost:26659/header/1; \
+        else \
+          authToken=$$(celestia-da ${CELESTIA_NODE_TYPE} auth admin --p2p.network $$DA_P2P_NETWORK) && \
+          catch_up_done=$$(curl -s -X POST -H 'Content-Type: application/json' -H \"Authorization: Bearer $$authToken\" --data '{\"id\":1, \"jsonrpc\":\"2.0\", \"method\":\"das.SamplingStats\", \"params\":[]}' http://localhost:26658 | jq -r '.result.catch_up_done') && \
+          [ \"$$catch_up_done\" = \"true\" ]; \
+        fi"]
+      interval: 2m
+      timeout: 10s
+      retries: 60
+    stop_grace_period: 10m
+    restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    profiles: ["celestia"]
