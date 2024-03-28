@@ -74,6 +74,8 @@ services:
     ports:
       - "8545:8545"
       - "8551:8551"
+      - "30333:30333/udp"
+      - "30333:30333/tcp"
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8545 || exit 1"]
       interval: 30s
