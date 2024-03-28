@@ -1,5 +1,5 @@
 # Use the existing image as a base
-FROM ghcr.io/rollkit/celestia-da:v0.13.1
+FROM ghcr.io/rollkit/celestia-da:v0.13.2
 
 ENV GO_VERSION 1.21.7
 
