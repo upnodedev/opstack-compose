@@ -5,8 +5,8 @@ FROM ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive
 
 ENV NODE_VERSION 20
-ENV GO_VERSION 1.21.2
-ENV FOUNDRY_COMMIT 2cb8757
+ENV GO_VERSION 1.21.8
+ENV FOUNDRY_COMMIT d1ab09d
 
 # Update and install basic dependencies
 RUN apt-get update && \
