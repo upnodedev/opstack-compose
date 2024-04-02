@@ -122,10 +122,6 @@ fi
 # Copy deploy-config.json to the configurations volume
 cp ./deploy-config/"$DEPLOYMENT_CONTEXT".json "$CONFIG_PATH"/deploy-config.json
 
-# Setting an environment variable for deployment
-IMPL_SALT=$(openssl rand -hex 32)
-export IMPL_SALT
-
 # Deploy the L1 contracts
 forge script scripts/Deploy.s.sol:Deploy --private-key "$DEPLOYER_PRIVATE_KEY" --broadcast --rpc-url "$L1_RPC_URL"
 forge script scripts/Deploy.s.sol:Deploy --sig 'sync()' --rpc-url "$L1_RPC_URL"
