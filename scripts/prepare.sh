@@ -89,13 +89,11 @@ cd "$OPTIMISM_DIR"/packages/contracts-bedrock
 # Check if the file ./deploy-config/$DEPLOYMENT_CONTEXT.json exists and the file "/app/deploy-config.json" does not exist
 if [ -f "./deploy-config/$DEPLOYMENT_CONTEXT.json" ] && [ ! -f "/app/deploy-config.json" ]; then
   # If the condition is true, copy the file ./deploy-config/$DEPLOYMENT_CONTEXT.json to /app/deploy-config.json
-  DEPLOY_CONFIG_CHECKSUM=$(md5sum "./deploy-config/$DEPLOYMENT_CONTEXT.json" | awk '{print $1}')
-  if [ "$DEPLOY_CONFIG_CHECKSUM" == "cd4d5dd0b96826ca4c51716de6aad7e7" ]; then
-    rm ./deploy-config/"$DEPLOYMENT_CONTEXT".json
-  else
-    cp ./deploy-config/"$DEPLOYMENT_CONTEXT".json /app/deploy-config.json
-  fi
+  cp ./deploy-config/"$DEPLOYMENT_CONTEXT".json /app/deploy-config.json
 fi
+
+# Show deployment config for better debuggability
+cat /app/deploy-config.json
 
 # Check if deploy-config.json exists
 if [ -f "/app/deploy-config.json" ]; then
