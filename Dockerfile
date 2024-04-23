@@ -6,7 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 ENV NODE_VERSION 20
 ENV GO_VERSION 1.21.8
-ENV FOUNDRY_COMMIT d1ab09d
+ENV FOUNDRY_COMMIT 00cec1d
 
 # Update and install basic dependencies
 RUN apt-get update && \
@@ -53,12 +53,15 @@ WORKDIR /app
 COPY scripts/clone-repos.sh /app/clone-repos.sh
 COPY scripts/utils.sh /app/utils.sh
 COPY scripts/prepare.sh /app/prepare.sh
-COPY scripts/getting-started-config.sh /app/getting-started-config.sh
 COPY deploy-config.jso[n] /app/deploy-config.json
 
 # Set permissions
 RUN chmod +x /app/clone-repos.sh
 RUN chmod +x /app/prepare.sh
+
+# MacOS pnpm fix
+RUN mkdir -p /app/pnpm/store
+RUN pnpm config set store-dir /app/pnpm/store
 
 # Set the clone-repos.sh script as the entry point
 ENTRYPOINT ["/app/prepare.sh"]

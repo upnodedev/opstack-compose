@@ -86,15 +86,6 @@ derive_and_check "SEQUENCER_PRIVATE_KEY" "GS_SEQUENCER_ADDRESS"
 
 cd "$OPTIMISM_DIR"/packages/contracts-bedrock
 
-# Check if the file ./deploy-config/$DEPLOYMENT_CONTEXT.json exists and the file "/app/deploy-config.json" does not exist
-if [ -f "./deploy-config/$DEPLOYMENT_CONTEXT.json" ] && [ ! -f "/app/deploy-config.json" ]; then
-  # If the condition is true, copy the file ./deploy-config/$DEPLOYMENT_CONTEXT.json to /app/deploy-config.json
-  cp ./deploy-config/"$DEPLOYMENT_CONTEXT".json /app/deploy-config.json
-fi
-
-# Show deployment config for better debuggability
-cat /app/deploy-config.json
-
 # Check if deploy-config.json exists
 if [ -f "/app/deploy-config.json" ]; then
   # Populate deploy-config.json with env variables
@@ -105,24 +96,26 @@ else
   # If deploy-config.json does not exist, use config.sh to generate it
   echo "Generating deploy-config.json..."
 
-  if [ ! -f "./scripts/getting-started/config.sh" ]; then
-    mkdir -p ./scripts/getting-started
-    cp /app/getting-started-config.sh ./scripts/getting-started/config.sh
-    chmod +x ./scripts/getting-started/config.sh
-  fi
-
   ./scripts/getting-started/config.sh
   if [ "./deploy-config/getting-started.json" != "./deploy-config/$DEPLOYMENT_CONTEXT.json" ]; then
     mv ./deploy-config/getting-started.json ./deploy-config/"$DEPLOYMENT_CONTEXT".json
   fi
 fi
 
+# Check if the file ./deploy-config/$DEPLOYMENT_CONTEXT.json exists and the file "/app/deploy-config.json" does not exist
+if [ -f "./deploy-config/$DEPLOYMENT_CONTEXT.json" ] && [ ! -f "/app/deploy-config.json" ]; then
+  # If the condition is true, copy the file ./deploy-config/$DEPLOYMENT_CONTEXT.json to /app/deploy-config.json
+  cp ./deploy-config/"$DEPLOYMENT_CONTEXT".json /app/deploy-config.json
+fi
+
+# Show deployment config for better debuggability
+cat /app/deploy-config.json
+
 # Copy deploy-config.json to the configurations volume
 cp ./deploy-config/"$DEPLOYMENT_CONTEXT".json "$CONFIG_PATH"/deploy-config.json
 
 # Deploy the L1 contracts
 forge script scripts/Deploy.s.sol:Deploy --private-key "$DEPLOYER_PRIVATE_KEY" --broadcast --rpc-url "$L1_RPC_URL"
-forge script scripts/Deploy.s.sol:Deploy --sig 'sync()' --rpc-url "$L1_RPC_URL"
 
 cp -r "$OPTIMISM_DIR"/packages/contracts-bedrock/deployments/"$DEPLOYMENT_CONTEXT" /app/data/deployments/
 
@@ -130,7 +123,7 @@ cp -r "$OPTIMISM_DIR"/packages/contracts-bedrock/deployments/"$DEPLOYMENT_CONTEX
 cd "$OPTIMISM_DIR"/op-node
 go run cmd/main.go genesis l2 \
   --deploy-config "$CONFIG_PATH"/deploy-config.json \
-  --deployment-dir "$DEPLOYMENT_DIR"/ \
+  --l1-deployments "$OPTIMISM_DIR/packages/contracts-bedrock/deployments/$DEPLOYMENT_CONTEXT/.deploy" \
   --outfile.l2 genesis.json \
   --outfile.rollup rollup.json \
   --l1-rpc "$L1_RPC_URL"
