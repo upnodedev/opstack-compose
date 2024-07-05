@@ -73,7 +73,6 @@ services:
       - opgeth.env
     ports:
       - "8545:8545"
-      - "8551:8551"
       - "30333:30333/udp"
       - "30333:30333/tcp"
     healthcheck:
