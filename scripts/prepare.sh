@@ -138,6 +138,11 @@ if [ ! -f /app/data/deployments/.deploy ]; then
   # Set deployment context to internal
   export DEPLOYMENT_CONTEXT=internal-opstack-compose
 
+  export DEPLOY_CONFIG_PATH=deploy-config/internal-opstack-compose.json
+  mkdir -p deployments
+  mkdir deployments/internal-opstack-compose
+  export DEPLOYMENT_OUTFILE="$OPTIMISM_DIR"/packages/contracts-bedrock/deployments/"$DEPLOYMENT_CONTEXT"/.deploy
+
   # Deploy the L1 contracts
   forge script scripts/Deploy.s.sol:Deploy --private-key "$DEPLOYER_PRIVATE_KEY" --broadcast --rpc-url "$L1_RPC_URL"
 
@@ -148,6 +153,10 @@ if [ ! -f /app/data/deployments/.deploy ]; then
   cp ./deploy-config/internal-opstack-compose.json "$CONFIG_PATH"/deploy-config.json
 fi
 
+export CONTRACT_ADDRESSES_PATH=/app/data/deployments/.deploy
+export STATE_DUMP_PATH=/app/data/deployments/allocs.json
+forge script scripts/L2Genesis.s.sol:L2Genesis --chain-id $L2_CHAIN_ID  --sig 'runWithAllUpgrades()' --private-key $DEPLOYER_PRIVATE_KEY
+
 # Generate the L2 config files
 cd "$OPTIMISM_DIR"/op-node
 go run cmd/main.go genesis l2 \
@@ -155,7 +164,8 @@ go run cmd/main.go genesis l2 \
   --l1-deployments "/app/data/deployments/.deploy" \
   --outfile.l2 genesis.json \
   --outfile.rollup rollup.json \
-  --l1-rpc "$L1_RPC_URL"
+  --l1-rpc "$L1_RPC_URL" \
+  --l2-allocs /app/data/deployments/allocs.json
 cp genesis.json "$CONFIG_PATH"/
 cp rollup.json "$CONFIG_PATH"/
 
