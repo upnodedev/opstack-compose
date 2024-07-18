@@ -6,7 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 ENV NODE_VERSION 20
 ENV GO_VERSION 1.21.8
-ENV FOUNDRY_VERSION nightly-f625d0fa7c51e65b4bf1e8f7931cd1c6e2e285e9
+ENV FOUNDRY_VERSION nightly-ef62fdbab638a275fc19a2ff8fe8951c3bd1d9aa
 
 # Update and install basic dependencies
 RUN apt-get update && \
