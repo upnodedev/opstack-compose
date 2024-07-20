@@ -6,7 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 ENV NODE_VERSION 20
 ENV GO_VERSION 1.21.8
-ENV FOUNDRY_COMMIT 00cec1d
+ENV FOUNDRY_VERSION nightly-ef62fdbab638a275fc19a2ff8fe8951c3bd1d9aa
 
 # Update and install basic dependencies
 RUN apt-get update && \
@@ -38,7 +38,7 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 # Install Foundry
 RUN curl -L https://foundry.paradigm.xyz | bash
 ENV PATH="/root/.foundry/bin:${PATH}"
-RUN foundryup -C ${FOUNDRY_COMMIT}
+RUN foundryup -v ${FOUNDRY_VERSION}
 
 # Install AWS CLI version 2
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
