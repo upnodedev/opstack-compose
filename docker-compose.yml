@@ -163,6 +163,7 @@ services:
       - opproposer.env
     ports:
       - "8560:8560"
+      - "7302:7302"
     stop_grace_period: 1m30s
     restart: unless-stopped
     extra_hosts:
