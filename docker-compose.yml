@@ -177,6 +177,9 @@ services:
       - .env
     volumes:
       - ./monitoring/prometheus:/etc/prometheus
-      - ./data/prometheus:/prometheus
+      - prometheus_data:/prometheus
     ports:
       - 9090:9090
+
+volumes:
+  prometheus_data:
