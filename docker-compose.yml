@@ -73,6 +73,7 @@ services:
       - opgeth.env
     ports:
       - "8545:8545"
+      - "7303:7303"
       - "30333:30333/udp"
       - "30333:30333/tcp"
     healthcheck:
@@ -168,3 +169,14 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     profiles: ["sequencer"]
+
+  prometheus:
+    image: prom/prometheus:${IMAGE_TAG__PROMETHEUS:-latest}
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./monitoring/prometheus:/etc/prometheus
+      - ./data/prometheus:/prometheus
+    ports:
+      - 9090:9090
