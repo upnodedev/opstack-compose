@@ -8,7 +8,7 @@ datasources:
   editable: true
   is_default: true
   name: 'Prometheus'
-  uid: '6R74VAnVz'
+  uid: 'ddshms3dlineoe'
   org_id: 1
   type: 'prometheus'
   url: 'http://prometheus:9090'
