@@ -170,8 +170,20 @@ services:
       - "host.docker.internal:host-gateway"
     profiles: ["sequencer"]
 
+  grafana:
+    image: grafana/grafana:11.1.0
+    restart: unless-stopped
+    env_file:
+      -  ./envs/common/grafana.env
+    volumes:
+      - ./monitoring/grafana/provisioning/:/etc/grafana/provisioning/:ro
+      - ./monitoring/grafana/dashboards/simple_node_dashboard.json:/var/lib/grafana/dashboards/simple_node_dashboard.json
+      - grafana_data:/var/lib/grafana
+    ports:
+      - 3000:3000
+
   prometheus:
-    image: prom/prometheus:${IMAGE_TAG__PROMETHEUS:-latest}
+    image: prom/prometheus:latest
     restart: unless-stopped
     env_file:
       - .env
@@ -182,4 +194,5 @@ services:
       - 9090:9090
 
 volumes:
+  grafana_data:
   prometheus_data:
