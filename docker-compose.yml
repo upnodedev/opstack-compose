@@ -73,7 +73,7 @@ services:
       - opgeth.env
     ports:
       - "8545:8545"
-      - "8551:8551"
+      - "7303:7303"
       - "30333:30333/udp"
       - "30333:30333/tcp"
     healthcheck:
@@ -163,8 +163,36 @@ services:
       - opproposer.env
     ports:
       - "8560:8560"
+      - "7302:7302"
     stop_grace_period: 1m30s
     restart: unless-stopped
     extra_hosts:
       - "host.docker.internal:host-gateway"
     profiles: ["sequencer"]
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    restart: unless-stopped
+    env_file:
+      -  grafana.env
+    volumes:
+      - ./monitoring/grafana/provisioning/:/etc/grafana/provisioning/:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+      - grafana_data:/var/lib/grafana
+    ports:
+      - 3000:3000
+
+  prometheus:
+    image: prom/prometheus:latest
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./monitoring/prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+    ports:
+      - 9090:9090
+
+volumes:
+  grafana_data:
+  prometheus_data:

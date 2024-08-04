@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  opstack-bridge-indexer:
+    image: upnode/opstack-bridge-indexer:latest
+    ports:
+      - "4241:3000"
+    env_file:
+      - indexer.env
+    volumes:
+      - ../data/bridge-db:/usr/src/app/database
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  opstack-bridge-ui:
+    image: upnode/opstack-bridge-ui:latest
+    ports:
+      - "4242:3333"
+    env_file:
+      - ui.env
+    restart: unless-stopped

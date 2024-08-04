@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  evm-faucet:
+    image: upnode/evm-faucet:latest
+    ports:
+      - "4244:8080"
+    env_file:
+      - .env
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

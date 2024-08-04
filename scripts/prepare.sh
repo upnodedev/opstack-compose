@@ -74,6 +74,9 @@ elif [ -z "$L1_BLOCKHASH" ] && [ -z "$L1_TIMESTAMP" ]; then
   export L1_BLOCKHASH
 fi
 
+L1_CHAIN_ID=$(cast chain-id --rpc-url "$L1_RPC_URL")
+export L1_CHAIN_ID
+
 # Source the utils.sh file
 # shellcheck disable=SC1091
 source /app/utils.sh
@@ -86,57 +89,88 @@ derive_and_check "SEQUENCER_PRIVATE_KEY" "GS_SEQUENCER_ADDRESS"
 
 cd "$OPTIMISM_DIR"/packages/contracts-bedrock
 
-# Check if the file ./deploy-config/$DEPLOYMENT_CONTEXT.json exists and the file "/app/deploy-config.json" does not exist
-if [ -f "./deploy-config/$DEPLOYMENT_CONTEXT.json" ] && [ ! -f "/app/deploy-config.json" ]; then
-  # If the condition is true, copy the file ./deploy-config/$DEPLOYMENT_CONTEXT.json to /app/deploy-config.json
-  DEPLOY_CONFIG_CHECKSUM=$(md5sum "./deploy-config/$DEPLOYMENT_CONTEXT.json" | awk '{print $1}')
-  if [ "$DEPLOY_CONFIG_CHECKSUM" == "cd4d5dd0b96826ca4c51716de6aad7e7" ]; then
-    rm ./deploy-config/"$DEPLOYMENT_CONTEXT".json
-  else
-    cp ./deploy-config/"$DEPLOYMENT_CONTEXT".json /app/deploy-config.json
-  fi
-fi
+# Remove old generated internal-opstack-compose.json deploy config
+rm -f ./deploy-config/internal-opstack-compose.json
 
 # Check if deploy-config.json exists
-if [ -f "/app/deploy-config.json" ]; then
+if [ -f "/app/data/configurations/deploy-config.json" ]; then
   # Populate deploy-config.json with env variables
   echo "Populating deploy-config.json with env variables..."
   # NOTE: scripts/Deploy.s.sol:Deploy expects the deploy-config.json file to be in $OPTIMISM_DIR/packages/contracts-bedrock/deploy-config/
-  envsubst < /app/deploy-config.json > /app/temp-deploy-config.json && mv /app/temp-deploy-config.json ./deploy-config/"$DEPLOYMENT_CONTEXT".json
+  envsubst < /app/data/configurations/deploy-config.json > /app/temp-deploy-config.json && mv /app/temp-deploy-config.json ./deploy-config/internal-opstack-compose.json
+elif [ -f "./deploy-config/$DEPLOYMENT_CONTEXT.json" ]; then
+  # Populate deploy-config.json with env variables
+  echo "Populating deploy-config.json with env variables..."
+  # NOTE: scripts/Deploy.s.sol:Deploy expects the deploy-config.json file to be in $OPTIMISM_DIR/packages/contracts-bedrock/deploy-config/
+  envsubst < ./deploy-config/$DEPLOYMENT_CONTEXT.json > /app/temp-deploy-config.json && mv /app/temp-deploy-config.json ./deploy-config/internal-opstack-compose.json
 else
   # If deploy-config.json does not exist, use config.sh to generate it
   echo "Generating deploy-config.json..."
 
-  if [ ! -f "./scripts/getting-started/config.sh" ]; then
-    mkdir -p ./scripts/getting-started
-    cp /app/getting-started-config.sh ./scripts/getting-started/config.sh
-    chmod +x ./scripts/getting-started/config.sh
-  fi
-
   ./scripts/getting-started/config.sh
-  if [ "./deploy-config/getting-started.json" != "./deploy-config/$DEPLOYMENT_CONTEXT.json" ]; then
-    mv ./deploy-config/getting-started.json ./deploy-config/"$DEPLOYMENT_CONTEXT".json
-  fi
+  mv ./deploy-config/getting-started.json ./deploy-config/internal-opstack-compose.json
 fi
 
-# Copy deploy-config.json to the configurations volume
-cp ./deploy-config/"$DEPLOYMENT_CONTEXT".json "$CONFIG_PATH"/deploy-config.json
+# Fix L1 and L2 Chain ID to the one set in the environment variable
+export BATCH_INBOX_ADDRESS_TEMP=$(openssl rand -hex 32 | head -c 40)
+jq \
+  --argjson l1ChainID $L1_CHAIN_ID \
+  --argjson l2ChainID $L2_CHAIN_ID \
+  --arg batchInboxAddress "0x$BATCH_INBOX_ADDRESS_TEMP" \
+  '.l1ChainID = $l1ChainID | .l2ChainID = $l2ChainID | .batchInboxAddress = $batchInboxAddress' \
+  ./deploy-config/internal-opstack-compose.json > /app/temp-deploy-config.json && mv /app/temp-deploy-config.json ./deploy-config/internal-opstack-compose.json
 
-# Deploy the L1 contracts
-forge script scripts/Deploy.s.sol:Deploy --private-key "$DEPLOYER_PRIVATE_KEY" --broadcast --rpc-url "$L1_RPC_URL"
-forge script scripts/Deploy.s.sol:Deploy --sig 'sync()' --rpc-url "$L1_RPC_URL"
+# Merge deploy override
+if [ -f /app/data/configurations/deploy-override.json ]; then
+  jq -s '.[0] * .[1]' ./deploy-config/internal-opstack-compose.json /app/data/configurations/deploy-override.json > /app/temp-deploy-config.json && mv /app/temp-deploy-config.json ./deploy-config/internal-opstack-compose.json
+fi
 
-cp -r "$OPTIMISM_DIR"/packages/contracts-bedrock/deployments/"$DEPLOYMENT_CONTEXT" /app/data/deployments/
+# Show deployment config for better debuggability
+cat ./deploy-config/internal-opstack-compose.json
+
+# Generate IMPL_SALT
+if [ -z "$IMPL_SALT" ]; then
+  export IMPL_SALT=$(sha256sum ./deploy-config/internal-opstack-compose.json | cut -d ' ' -f1)
+fi
+
+# If not deployed
+if [ ! -f /app/data/deployments/.deploy ]; then
+  # Set deployment context to internal
+  export DEPLOYMENT_CONTEXT=internal-opstack-compose
+
+  export DEPLOY_CONFIG_PATH=deploy-config/internal-opstack-compose.json
+  mkdir -p deployments
+  mkdir deployments/internal-opstack-compose
+  export DEPLOYMENT_OUTFILE="$OPTIMISM_DIR"/packages/contracts-bedrock/deployments/"$DEPLOYMENT_CONTEXT"/.deploy
+
+  # Deploy the L1 contracts
+  forge script scripts/Deploy.s.sol:Deploy --private-key "$DEPLOYER_PRIVATE_KEY" --broadcast --rpc-url "$L1_RPC_URL"
+
+  # Save the deployment address
+  cp -r "$OPTIMISM_DIR"/packages/contracts-bedrock/deployments/"$DEPLOYMENT_CONTEXT"/. /app/data/deployments/
+
+  # Copy deploy-config.json to the configurations volume
+  cp ./deploy-config/internal-opstack-compose.json "$CONFIG_PATH"/deploy-config.json
+fi
+
+export CONTRACT_ADDRESSES_PATH=/app/data/deployments/.deploy
+export STATE_DUMP_PATH=/app/data/deployments/allocs.json
+forge script scripts/L2Genesis.s.sol:L2Genesis --chain-id $L2_CHAIN_ID  --sig 'runWithAllUpgrades()' --private-key $DEPLOYER_PRIVATE_KEY
 
 # Generate the L2 config files
 cd "$OPTIMISM_DIR"/op-node
 go run cmd/main.go genesis l2 \
   --deploy-config "$CONFIG_PATH"/deploy-config.json \
-  --deployment-dir "$DEPLOYMENT_DIR"/ \
+  --l1-deployments "/app/data/deployments/.deploy" \
   --outfile.l2 genesis.json \
   --outfile.rollup rollup.json \
-  --l1-rpc "$L1_RPC_URL"
+  --l1-rpc "$L1_RPC_URL" \
+  --l2-allocs /app/data/deployments/allocs.json
 cp genesis.json "$CONFIG_PATH"/
 cp rollup.json "$CONFIG_PATH"/
+
+# Reset repository for cleanup
+cd "$OPTIMISM_DIR"
+git reset HEAD --hard
 
 exec "$@"
