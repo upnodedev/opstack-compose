@@ -22,7 +22,10 @@ RUN mkdir -p /etc/apt/keyrings && \
     apt-get install nodejs -y
 
 # Install PNPM
-RUN npm install -g pnpm
+#RUN npm install -g pnpm
+
+# Install just
+RUN apt install just
 
 # Install Go
 RUN ARCH=$(dpkg --print-architecture) && echo "Architecture: ${ARCH}" && \
@@ -59,8 +62,8 @@ RUN chmod +x /app/clone-repos.sh
 RUN chmod +x /app/prepare.sh
 
 # MacOS pnpm fix
-RUN mkdir -p /app/pnpm/store
-RUN pnpm config set store-dir /app/pnpm/store
+#RUN mkdir -p /app/pnpm/store
+#RUN pnpm config set store-dir /app/pnpm/store
 
 # Set the clone-repos.sh script as the entry point
 ENTRYPOINT ["/app/prepare.sh"]
