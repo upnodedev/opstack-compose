@@ -24,8 +24,21 @@ RUN mkdir -p /etc/apt/keyrings && \
 # Install PNPM
 #RUN npm install -g pnpm
 
+# Set the makedeb release you want.
+ENV MAKEDEB_RELEASE='makedeb'
+
+# Run the install script. Note that it's `bash -c` and not `bash -ci` now.
+RUN [/bin/bash, -c, "$(wget -qO - 'https://shlink.makedeb.org/install')"]
+
+RUN git clone https://mpr.makedeb.org/just
+RUN cd just
+RUN makedeb -si
+RUN cd ..
+
 # Install just
-RUN apt install just
+RUN mkdir -p /app/bin
+RUN curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to /app/bin
+ENV PATH="$PATH:/app/bin"
 
 # Install Go
 RUN ARCH=$(dpkg --print-architecture) && echo "Architecture: ${ARCH}" && \
