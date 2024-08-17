@@ -30,18 +30,18 @@ fi
 # Create jwt.txt if it does not exist
 [ -f "$CONFIG_PATH/jwt.txt" ] || openssl rand -hex 32 > "$CONFIG_PATH"/jwt.txt
 
-# Check if all required config files exist
+# Check if all required genesis files exist
 if [ -f "$CONFIG_PATH/genesis.json" ] && [ -f "$CONFIG_PATH/rollup.json" ]; then
-  echo "L2 config files are present, skipping script."
+  echo "L2 genesis files are present, skipping prepare.sh script."
   exec "$@"
   exit 0
 elif [ -f "$CONFIG_PATH/genesis.json" ] || [ -f "$CONFIG_PATH/rollup.json" ]; then
-  echo "Error: Partial L2 config files are present, but not all. Exiting script."
+  echo "Error: One of the genesis.json or rollup.json files is missing."
   exit 1
 fi
 
-# If no components exist, continue with the script
-echo "No required components are present, continuing script execution."
+# If no genesis files exist, continue with the script
+echo "No required genesis files are present, continuing script execution."
 
 # Check if all or none of the private keys are provided
 if [ -z "$BATCHER_PRIVATE_KEY" ] && [ -z "$PROPOSER_PRIVATE_KEY" ] && [ -z "$SEQUENCER_PRIVATE_KEY" ]; then
