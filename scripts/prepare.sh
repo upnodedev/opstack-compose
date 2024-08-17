@@ -60,6 +60,7 @@ else
   exit 1
 fi
 
+# Get L1 chain ID and export it
 L1_CHAIN_ID=$(cast chain-id --rpc-url "$L1_RPC_URL")
 export L1_CHAIN_ID
 
@@ -82,26 +83,21 @@ rm -f ./deploy-config/internal-opstack-compose.json
 if [ -f "/app/data/configurations/deploy-config.json" ]; then
   # Populate deploy-config.json with env variables
   echo "Populating deploy-config.json with env variables..."
-  # NOTE: scripts/Deploy.s.sol:Deploy expects the deploy-config.json file to be in $OPTIMISM_DIR/packages/contracts-bedrock/deploy-config/
   envsubst < /app/data/configurations/deploy-config.json > /app/temp-deploy-config.json && mv /app/temp-deploy-config.json ./deploy-config/internal-opstack-compose.json
-elif [ -f "./deploy-config/$DEPLOYMENT_CONTEXT.json" ]; then
-  # Populate deploy-config.json with env variables
-  echo "Populating deploy-config.json with env variables..."
-  # NOTE: scripts/Deploy.s.sol:Deploy expects the deploy-config.json file to be in $OPTIMISM_DIR/packages/contracts-bedrock/deploy-config/
-  envsubst < ./deploy-config/$DEPLOYMENT_CONTEXT.json > /app/temp-deploy-config.json && mv /app/temp-deploy-config.json ./deploy-config/internal-opstack-compose.json
 else
-  # If deploy-config.json does not exist, use config.sh to generate it
-  echo "Generating deploy-config.json..."
+  # If deploy-config.json does not exist, use config.sh to generate getting-started.json
+  echo "Generating getting-started.json..."
 
   ./scripts/getting-started/config.sh
   mv ./deploy-config/getting-started.json ./deploy-config/internal-opstack-compose.json
 fi
 
 # Fix L1 and L2 Chain ID to the one set in the environment variable
-export BATCH_INBOX_ADDRESS_TEMP=$(openssl rand -hex 32 | head -c 40)
+BATCH_INBOX_ADDRESS_TEMP=$(openssl rand -hex 32 | head -c 40)
+export BATCH_INBOX_ADDRESS_TEMP
 jq \
-  --argjson l1ChainID $L1_CHAIN_ID \
-  --argjson l2ChainID $L2_CHAIN_ID \
+  --argjson l1ChainID "$L1_CHAIN_ID" \
+  --argjson l2ChainID "$L2_CHAIN_ID" \
   --arg batchInboxAddress "0x$BATCH_INBOX_ADDRESS_TEMP" \
   '.l1ChainID = $l1ChainID | .l2ChainID = $l2ChainID | .batchInboxAddress = $batchInboxAddress' \
   ./deploy-config/internal-opstack-compose.json > /app/temp-deploy-config.json && mv /app/temp-deploy-config.json ./deploy-config/internal-opstack-compose.json
@@ -116,42 +112,37 @@ cat ./deploy-config/internal-opstack-compose.json
 
 # Generate IMPL_SALT
 if [ -z "$IMPL_SALT" ]; then
-  export IMPL_SALT=$(sha256sum ./deploy-config/internal-opstack-compose.json | cut -d ' ' -f1)
+  IMPL_SALT=$(sha256sum ./deploy-config/internal-opstack-compose.json | cut -d ' ' -f1)
+  export IMPL_SALT
 fi
 
 # If not deployed
-if [ ! -f /app/data/deployments/.deploy ]; then
-  # Set deployment context to internal
-  export DEPLOYMENT_CONTEXT=internal-opstack-compose
-
-  export DEPLOY_CONFIG_PATH=deploy-config/internal-opstack-compose.json
-  mkdir -p deployments
-  mkdir deployments/internal-opstack-compose
-  export DEPLOYMENT_OUTFILE="$OPTIMISM_DIR"/packages/contracts-bedrock/deployments/"$DEPLOYMENT_CONTEXT"/.deploy
+if [ ! -f /app/data/deployments/artifact.json ]; then
+  export DEPLOYMENT_OUTFILE=./deployments/artifact.json
+  export DEPLOY_CONFIG_PATH=./deploy-config/internal-opstack-compose.json
 
   # Deploy the L1 contracts
-  forge script scripts/Deploy.s.sol:Deploy --private-key "$DEPLOYER_PRIVATE_KEY" --broadcast --rpc-url "$L1_RPC_URL"
+  forge script scripts/deploy/Deploy.s.sol:Deploy --private-key "$DEPLOYER_PRIVATE_KEY" --broadcast --rpc-url "$L1_RPC_URL"
 
-  # Save the deployment address
-  cp -r "$OPTIMISM_DIR"/packages/contracts-bedrock/deployments/"$DEPLOYMENT_CONTEXT"/. /app/data/deployments/
-
-  # Copy deploy-config.json to the configurations volume
-  cp ./deploy-config/internal-opstack-compose.json "$CONFIG_PATH"/deploy-config.json
+  # Copy the deployment files to the data volume
+  cp $DEPLOYMENT_OUTFILE /app/data/deployments/
+  cp $DEPLOY_CONFIG_PATH "$CONFIG_PATH"/deploy-config.json
 fi
 
-export CONTRACT_ADDRESSES_PATH=/app/data/deployments/.deploy
+export CONTRACT_ADDRESSES_PATH=/app/data/deployments/artifact.json
+export DEPLOY_CONFIG_PATH="$CONFIG_PATH"/deploy-config.json
 export STATE_DUMP_PATH=/app/data/deployments/allocs.json
-forge script scripts/L2Genesis.s.sol:L2Genesis --chain-id $L2_CHAIN_ID  --sig 'runWithAllUpgrades()' --private-key $DEPLOYER_PRIVATE_KEY
+forge script scripts/L2Genesis.s.sol:L2Genesis --chain-id $L2_CHAIN_ID  --sig 'runWithAllUpgrades()' --private-key $DEPLOYER_PRIVATE_KEY # OR runWithStateDump()
 
-# Generate the L2 config files
+# Generate the L2 genesis files
 cd "$OPTIMISM_DIR"/op-node
 go run cmd/main.go genesis l2 \
-  --deploy-config "$CONFIG_PATH"/deploy-config.json \
-  --l1-deployments "/app/data/deployments/.deploy" \
+  --deploy-config "$DEPLOY_CONFIG_PATH" \
+  --l1-deployments $CONTRACT_ADDRESSES_PATH \
   --outfile.l2 genesis.json \
   --outfile.rollup rollup.json \
   --l1-rpc "$L1_RPC_URL" \
-  --l2-allocs /app/data/deployments/allocs.json
+  --l2-allocs $STATE_DUMP_PATH
 cp genesis.json "$CONFIG_PATH"/
 cp rollup.json "$CONFIG_PATH"/
 
