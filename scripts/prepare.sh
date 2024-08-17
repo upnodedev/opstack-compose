@@ -116,11 +116,12 @@ if [ -z "$IMPL_SALT" ]; then
   export IMPL_SALT
 fi
 
+# NOTE: The $DEPLOYMENT_OUTFILE and $DEPLOY_CONFIG_PATH vars are required for line 136
+export DEPLOYMENT_OUTFILE=./deployments/artifact.json
+export DEPLOY_CONFIG_PATH=./deploy-config/internal-opstack-compose.json # "$CONFIG_PATH"/deploy-config.json not suitable due to the error "... not allowed to be accessed for read operations"
+
 # If not deployed
 if [ ! -f /app/data/deployments/artifact.json ]; then
-  export DEPLOYMENT_OUTFILE=./deployments/artifact.json
-  export DEPLOY_CONFIG_PATH=./deploy-config/internal-opstack-compose.json
-
   # Deploy the L1 contracts
   forge script scripts/deploy/Deploy.s.sol:Deploy --private-key "$DEPLOYER_PRIVATE_KEY" --broadcast --rpc-url "$L1_RPC_URL"
 
@@ -130,10 +131,10 @@ if [ ! -f /app/data/deployments/artifact.json ]; then
 fi
 
 export CONTRACT_ADDRESSES_PATH=/app/data/deployments/artifact.json
-export DEPLOY_CONFIG_PATH="$CONFIG_PATH"/deploy-config.json
 export STATE_DUMP_PATH=/app/data/deployments/allocs.json
 forge script scripts/L2Genesis.s.sol:L2Genesis --chain-id $L2_CHAIN_ID  --sig 'runWithAllUpgrades()' --private-key $DEPLOYER_PRIVATE_KEY # OR runWithStateDump()
 
+export DEPLOY_CONFIG_PATH="$CONFIG_PATH"/deploy-config.json
 # Generate the L2 genesis files
 cd "$OPTIMISM_DIR"/op-node
 go run cmd/main.go genesis l2 \
