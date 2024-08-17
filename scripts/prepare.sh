@@ -60,20 +60,6 @@ else
   exit 1
 fi
 
-# Check if both L1_BLOCKHASH and L1_TIMESTAMP are set or unset
-if [ -n "$L1_BLOCKHASH" ] && [ -z "$L1_TIMESTAMP" ] || [ -z "$L1_BLOCKHASH" ] && [ -n "$L1_TIMESTAMP" ]; then
-  echo "Error: Both L1_BLOCKHASH and L1_TIMESTAMP must be set or unset."
-  exit 1
-elif [ -z "$L1_BLOCKHASH" ] && [ -z "$L1_TIMESTAMP" ]; then
-  # Fetch block details if both variables are unset
-  echo "Fetching block details from L1_RPC_URL..."
-  block=$(cast block finalized --rpc-url "$L1_RPC_URL")
-  L1_TIMESTAMP=$(echo "$block" | awk '/timestamp/ { print $2 }')
-  export L1_TIMESTAMP
-  L1_BLOCKHASH=$(echo "$block" | awk '/hash/ { print $2 }')
-  export L1_BLOCKHASH
-fi
-
 L1_CHAIN_ID=$(cast chain-id --rpc-url "$L1_RPC_URL")
 export L1_CHAIN_ID
 
