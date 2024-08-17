@@ -122,7 +122,7 @@ export DEPLOY_CONFIG_PATH=./deploy-config/internal-opstack-compose.json # "$CONF
 
 # If not deployed
 if [ ! -f /app/data/deployments/artifact.json ]; then
-  # Determine the script path (fix for v1.7.6)
+  # Determine the script path (fix for v1.7.7)
   DEPLOY_SCRIPT_PATH=$(test -f scripts/deploy/Deploy.s.sol && echo "scripts/deploy/Deploy.s.sol" || echo "scripts/Deploy.s.sol")
 
   # Deploy the L1 contracts
