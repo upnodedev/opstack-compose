@@ -122,8 +122,11 @@ export DEPLOY_CONFIG_PATH=./deploy-config/internal-opstack-compose.json # "$CONF
 
 # If not deployed
 if [ ! -f /app/data/deployments/artifact.json ]; then
+  # Determine the script path (fix for v1.7.6)
+  DEPLOY_SCRIPT_PATH=$(test -f scripts/deploy/Deploy.s.sol && echo "scripts/deploy/Deploy.s.sol" || echo "scripts/Deploy.s.sol")
+
   # Deploy the L1 contracts
-  forge script scripts/deploy/Deploy.s.sol:Deploy --private-key "$DEPLOYER_PRIVATE_KEY" --broadcast --rpc-url "$L1_RPC_URL"
+  forge script "$DEPLOY_SCRIPT_PATH" --private-key "$DEPLOYER_PRIVATE_KEY" --broadcast --rpc-url "$L1_RPC_URL"
 
   # Copy the deployment files to the data volume
   cp $DEPLOYMENT_OUTFILE /app/data/deployments/
