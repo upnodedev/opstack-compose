@@ -30,9 +30,9 @@ fi
 # Create jwt.txt if it does not exist
 [ -f "$CONFIG_PATH/jwt.txt" ] || openssl rand -hex 32 > "$CONFIG_PATH"/jwt.txt
 
-# Check if all required genesis files exist
+# Check if all required config files exist
 if [ -f "$CONFIG_PATH/genesis.json" ] && [ -f "$CONFIG_PATH/rollup.json" ]; then
-  echo "L2 genesis files are present, skipping prepare.sh script."
+  echo "L2 config files are present, skipping prepare.sh script."
   exec "$@"
   exit 0
 elif [ -f "$CONFIG_PATH/genesis.json" ] || [ -f "$CONFIG_PATH/rollup.json" ]; then
@@ -40,8 +40,8 @@ elif [ -f "$CONFIG_PATH/genesis.json" ] || [ -f "$CONFIG_PATH/rollup.json" ]; th
   exit 1
 fi
 
-# If no genesis files exist, continue with the script
-echo "No required genesis files are present, continuing script execution."
+# If no L2 config files exist, continue with the script
+echo "No required L2 config files are present, continuing script execution."
 
 # Check if all or none of the private keys are provided
 if [ -z "$BATCHER_PRIVATE_KEY" ] && [ -z "$PROPOSER_PRIVATE_KEY" ] && [ -z "$SEQUENCER_PRIVATE_KEY" ]; then
@@ -130,6 +130,7 @@ if [ ! -f /app/data/deployments/artifact.json ]; then
   cp $DEPLOY_CONFIG_PATH "$CONFIG_PATH"/deploy-config.json
 fi
 
+# Generating L2 Allocs
 export CONTRACT_ADDRESSES_PATH=/app/data/deployments/artifact.json
 export STATE_DUMP_PATH=/app/data/deployments/allocs.json
 forge script scripts/L2Genesis.s.sol:L2Genesis --chain-id $L2_CHAIN_ID  --sig 'runWithAllUpgrades()' --private-key $DEPLOYER_PRIVATE_KEY # OR runWithStateDump()
