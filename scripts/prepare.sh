@@ -80,10 +80,10 @@ cd "$OPTIMISM_DIR"/packages/contracts-bedrock
 rm -f ./deploy-config/internal-opstack-compose.json
 
 # Check if deploy-config.json exists
-if [ -f "/app/data/configurations/deploy-config.json" ]; then
+if [ -f "$CONFIG_PATH/deploy-config.json" ]; then
   # Populate deploy-config.json with env variables
   echo "Populating deploy-config.json with env variables..."
-  envsubst < /app/data/configurations/deploy-config.json > /app/temp-deploy-config.json && mv /app/temp-deploy-config.json ./deploy-config/internal-opstack-compose.json
+  envsubst < "$CONFIG_PATH"/deploy-config.json > /app/temp-deploy-config.json && mv /app/temp-deploy-config.json ./deploy-config/internal-opstack-compose.json
 else
   # If deploy-config.json does not exist, use config.sh to generate getting-started.json
   echo "Generating getting-started.json..."
@@ -103,8 +103,8 @@ jq \
   ./deploy-config/internal-opstack-compose.json > /app/temp-deploy-config.json && mv /app/temp-deploy-config.json ./deploy-config/internal-opstack-compose.json
 
 # Merge deploy override
-if [ -f /app/data/configurations/deploy-override.json ]; then
-  jq -s '.[0] * .[1]' ./deploy-config/internal-opstack-compose.json /app/data/configurations/deploy-override.json > /app/temp-deploy-config.json && mv /app/temp-deploy-config.json ./deploy-config/internal-opstack-compose.json
+if [ -f "$CONFIG_PATH"/deploy-override.json ]; then
+  jq -s '.[0] * .[1]' ./deploy-config/internal-opstack-compose.json "$CONFIG_PATH"/deploy-override.json > /app/temp-deploy-config.json && mv /app/temp-deploy-config.json ./deploy-config/internal-opstack-compose.json
 fi
 
 # Show deployment config for better debuggability
@@ -121,7 +121,7 @@ export DEPLOYMENT_OUTFILE=./deployments/artifact.json
 export DEPLOY_CONFIG_PATH=./deploy-config/internal-opstack-compose.json # "$CONFIG_PATH"/deploy-config.json not suitable due to the error "... not allowed to be accessed for read operations"
 
 # If not deployed
-if [ ! -f /app/data/deployments/artifact.json ]; then
+if [ ! -f "$DEPLOYMENT_DIR"/artifact.json ]; then
   # Determine the script path (fix for v1.7.7)
   DEPLOY_SCRIPT_PATH=$(test -f scripts/deploy/Deploy.s.sol && echo "scripts/deploy/Deploy.s.sol" || echo "scripts/Deploy.s.sol")
 
@@ -129,13 +129,13 @@ if [ ! -f /app/data/deployments/artifact.json ]; then
   forge script "$DEPLOY_SCRIPT_PATH" --private-key "$DEPLOYER_PRIVATE_KEY" --broadcast --rpc-url "$L1_RPC_URL"
 
   # Copy the deployment files to the data volume
-  cp $DEPLOYMENT_OUTFILE /app/data/deployments/
+  cp $DEPLOYMENT_OUTFILE "$DEPLOYMENT_DIR"/
   cp $DEPLOY_CONFIG_PATH "$CONFIG_PATH"/deploy-config.json
 fi
 
 # Generating L2 Allocs
-export CONTRACT_ADDRESSES_PATH=/app/data/deployments/artifact.json
-export STATE_DUMP_PATH=/app/data/deployments/allocs.json
+export CONTRACT_ADDRESSES_PATH=$DEPLOYMENT_DIR/artifact.json
+export STATE_DUMP_PATH=$DEPLOYMENT_DIR/allocs.json
 forge script scripts/L2Genesis.s.sol:L2Genesis --chain-id "$L2_CHAIN_ID"  --sig 'runWithAllUpgrades()' --private-key "$DEPLOYER_PRIVATE_KEY" # OR runWithStateDump()
 
 export DEPLOY_CONFIG_PATH="$CONFIG_PATH"/deploy-config.json
@@ -143,11 +143,11 @@ export DEPLOY_CONFIG_PATH="$CONFIG_PATH"/deploy-config.json
 cd "$OPTIMISM_DIR"/op-node
 go run cmd/main.go genesis l2 \
   --deploy-config "$DEPLOY_CONFIG_PATH" \
-  --l1-deployments $CONTRACT_ADDRESSES_PATH \
+  --l1-deployments "$CONTRACT_ADDRESSES_PATH" \
   --outfile.l2 genesis.json \
   --outfile.rollup rollup.json \
   --l1-rpc "$L1_RPC_URL" \
-  --l2-allocs $STATE_DUMP_PATH
+  --l2-allocs "$STATE_DUMP_PATH"
 cp genesis.json "$CONFIG_PATH"/
 cp rollup.json "$CONFIG_PATH"/
 
