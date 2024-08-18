@@ -136,7 +136,12 @@ fi
 # Generating L2 Allocs
 export CONTRACT_ADDRESSES_PATH=$DEPLOYMENT_DIR/artifact.json
 export STATE_DUMP_PATH=$DEPLOYMENT_DIR/allocs.json
-forge script scripts/L2Genesis.s.sol:L2Genesis --chain-id "$L2_CHAIN_ID"  --sig 'runWithAllUpgrades()' --private-key "$DEPLOYER_PRIVATE_KEY" # OR runWithStateDump()
+
+if [ -f "$STATE_DUMP_PATH" ]; then
+  echo "State dump already exists, skipping state dump generation."
+else
+  forge script scripts/L2Genesis.s.sol:L2Genesis --chain-id "$L2_CHAIN_ID"  --sig 'runWithAllUpgrades()' --private-key "$DEPLOYER_PRIVATE_KEY" # OR runWithStateDump()
+fi
 
 export DEPLOY_CONFIG_PATH="$CONFIG_PATH"/deploy-config.json
 # Generate the L2 genesis files
