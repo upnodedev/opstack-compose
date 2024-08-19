@@ -13,12 +13,12 @@ fi
 # Check if OP_PROPOSER_L2OO_ADDRESS environment variable is set
 if [ -z "$OP_PROPOSER_L2OO_ADDRESS" ]; then
   # If not set, check if the file exists
-  if [ ! -f "$DEPLOYMENT_DIR/.deploy" ]; then
-    echo "File $DEPLOYMENT_DIR/.deploy does not exist. Please import data/deployments or set the OP_PROPOSER_L2OO_ADDRESS variable."
+  if [ ! -f "$DEPLOYMENT_DIR/artifact.json" ]; then
+    echo "File $DEPLOYMENT_DIR/artifact.json does not exist. Please import data/deployments or set the OP_PROPOSER_L2OO_ADDRESS variable."
     exit 1
   fi
   # Use the address from the $DEPLOYMENT_DIR
-  OP_PROPOSER_L2OO_ADDRESS=$(jq -r .L2OutputOracleProxy $DEPLOYMENT_DIR/.deploy)
+  OP_PROPOSER_L2OO_ADDRESS=$(jq -r .L2OutputOracleProxy $DEPLOYMENT_DIR/artifact.json)
 fi
 
 exec "$BIN_DIR"/op-proposer

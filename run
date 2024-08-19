@@ -1,5 +1,31 @@
 #!/bin/bash
 
+# Define colors
+ORANGE='\e[0;33m'
+BLUE='\e[0;34m'
+RED='\e[0;31m'
+GREEN='\e[0;32m'
+NC='\e[0m'
+
+# Check if .env file exists
+if [ ! -f .env ]; then
+  if [ -f .env.example ]; then
+    echo -e "${RED}Error${NC}: .env file not found."
+    echo -ne "${ORANGE}Do you want to use .env.example and rename it to .env? (yes/no): ${NC}"
+    read -r rename_confirm
+    if [[ "$rename_confirm" =~ ^(yes|y)$ ]]; then
+      mv .env.example .env
+      echo -e "${GREEN}.env.example has been renamed to .env.${NC}"
+    else
+      echo "Exiting."
+      exit 1
+    fi
+  else
+    echo -e "${RED}Error${NC}: .env and .env.example files not found. Exiting."
+    exit 1
+  fi
+fi
+
 # Load environment variables from .env file
 # shellcheck disable=SC1091
 source .env
@@ -10,11 +36,6 @@ command="docker compose"
 # Add profiles based on SEQUENCER_MODE and Celestia support
 [ "$SEQUENCER_MODE" = "true" ] && command+=" --profile sequencer"
 [ "$CELESTIA_MODE" = "true" ] && command+=" --profile celestia"
-
-# Define colors
-ORANGE='\e[0;33m'
-BLUE='\e[0;34m'
-NC='\e[0m'
 
 if [ "$SKIP_DEPLOYMENT_CHECK" = "true" ]; then
   echo -e "${ORANGE}NOTE${NC}: Only genesis.json and rollup.json will be checked (SKIP_DEPLOYMENT_CHECK=$SKIP_DEPLOYMENT_CHECK)."
