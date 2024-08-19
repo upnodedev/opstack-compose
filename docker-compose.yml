@@ -55,10 +55,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.proxy
-    command: ["/bin/bash", "-c", "/app/proxy.sh"]
     env_file:
       - .env
-      - signerproxy.env
     expose:
       - 3005
     healthcheck:
