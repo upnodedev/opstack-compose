@@ -11,10 +11,8 @@ if [ ! -f "$BIN_DIR/op-node" ] || [ ! -f "$BIN_DIR/op-batcher" ] || [ ! -f "$BIN
   # Build op-node, op-batcher and op-proposer
   cd "$OPTIMISM_DIR"
   #pnpm install
-  just install
   make op-node op-batcher op-proposer
   #pnpm build
-  just build
 
   # Copy binaries to the bin volume
   cp -f "$OPTIMISM_DIR"/op-node/bin/op-node "$BIN_DIR"/
