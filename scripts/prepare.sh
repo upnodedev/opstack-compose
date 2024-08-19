@@ -126,7 +126,7 @@ if [ ! -f "$DEPLOYMENT_DIR"/artifact.json ]; then
   DEPLOY_SCRIPT_PATH=$(test -f scripts/deploy/Deploy.s.sol && echo "scripts/deploy/Deploy.s.sol" || echo "scripts/Deploy.s.sol")
 
   # Deploy the L1 contracts
-  forge script scripts/Deploy.s.sol:Deploy --private-key "$DEPLOYER_PRIVATE_KEY" --broadcast --rpc-url "$L1_RPC_URL"
+  forge script $DEPLOY_SCRIPT_PATH --private-key "$DEPLOYER_PRIVATE_KEY" --broadcast --rpc-url "$L1_RPC_URL"
 
   # Copy the deployment files to the data volume
   cp $DEPLOYMENT_OUTFILE "$DEPLOYMENT_DIR"/
