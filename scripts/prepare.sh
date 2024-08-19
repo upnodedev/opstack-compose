@@ -146,7 +146,7 @@ if [ ! -f /app/data/deployments/.deploy ]; then
   export DEPLOYMENT_OUTFILE="$OPTIMISM_DIR"/packages/contracts-bedrock/deployments/"$DEPLOYMENT_CONTEXT"/.deploy
 
   # Deploy the L1 contracts
-  forge script scripts/Deploy.s.sol:Deploy --private-key "$DEPLOYER_PRIVATE_KEY" --broadcast --rpc-url "$L1_RPC_URL"
+  forge script scripts/deploy/Deploy.s.sol:Deploy --private-key "$DEPLOYER_PRIVATE_KEY" --broadcast --rpc-url "$L1_RPC_URL"
 
   # Save the deployment address
   cp -r "$OPTIMISM_DIR"/packages/contracts-bedrock/deployments/"$DEPLOYMENT_CONTEXT"/. /app/data/deployments/
