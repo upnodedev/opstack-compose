@@ -21,9 +21,6 @@ RUN mkdir -p /etc/apt/keyrings && \
     apt-get update && \
     apt-get install nodejs -y
 
-# Install PNPM
-#RUN npm install -g pnpm
-
 # Install just
 RUN mkdir -p /app/bin
 RUN curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to /app/bin
