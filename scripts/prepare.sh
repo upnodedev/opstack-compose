@@ -101,8 +101,8 @@ jq \
   ./deploy-config/internal-opstack-compose.json > /app/temp-deploy-config.json && mv /app/temp-deploy-config.json ./deploy-config/internal-opstack-compose.json
 
 # Workaround for issue with 'InvalidClockExtension' error
-export PREIMAGE_ORACLE_CHALLENGE_PERIOD = 120
-jq --arg preimageOracleChallengePeriod "$PREIMAGE_ORACLE_CHALLENGE_PERIOD" '.preimageOracleChallengePeriod = $preimageOracleChallengePeriod'  ./deploy-config/internal-opstack-compose.json "$CONFIG_PATH"/deploy-override.json > /app/temp-deploy-config.json && mv /app/temp-deploy-config.json ./deploy-config/internal-opstack-compose.json
+export PREIMAGE_ORACLE_CHALLENGE_PERIOD=120
+jq --arg preimageOracleChallengePeriod "$PREIMAGE_ORACLE_CHALLENGE_PERIOD" '.preimageOracleChallengePeriod = $preimageOracleChallengePeriod'  ./deploy-config/internal-opstack-compose.json > /app/temp-deploy-config.json && mv /app/temp-deploy-config.json ./deploy-config/internal-opstack-compose.json
 
 # Merge deploy override
 if [ -f "$CONFIG_PATH"/deploy-override.json ]; then
