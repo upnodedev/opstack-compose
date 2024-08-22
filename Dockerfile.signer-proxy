@@ -1,0 +1,18 @@
+FROM rust:1.80.1 as builder
+
+ARG REPO_URL
+ARG TAG
+
+WORKDIR /app
+
+RUN git clone -b ${TAG} --depth 1 ${REPO_URL} . && \
+    cargo build --release --no-default-features
+
+FROM debian:buster-slim
+
+WORKDIR /app
+
+COPY --from=builder /app/target/release/signer-proxy /usr/local/bin/signer-proxy
+
+CMD ["signer-proxy", "${SIGNER_MODE:-yubihsm}", "serve"]
+
