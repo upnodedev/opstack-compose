@@ -8,11 +8,12 @@ WORKDIR /app
 RUN git clone -b ${TAG} --depth 1 ${REPO_URL} . && \
     cargo build --release --no-default-features
 
-FROM debian:buster-slim
+FROM debian:bookworm-slim
 
 WORKDIR /app
 
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
 COPY --from=builder /app/target/release/signer-proxy /usr/local/bin/signer-proxy
 
-CMD ["signer-proxy", "${SIGNER_MODE:-yubihsm}", "serve"]
-
+CMD ["sh", "-c", "signer-proxy ${SIGNER_PROXY_MODE} serve"]
