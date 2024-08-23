@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Check if SIGNER_PROXY environment variable is set to false
 if [ "$SIGNER_PROXY" != "true" ]; then

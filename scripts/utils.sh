@@ -21,7 +21,7 @@ derive_and_check() {
   fi
 }
 
-function get_address() {
+get_address() {
   local endpoint=$1
   local response
   response=$(curl -s "${endpoint}/address")
