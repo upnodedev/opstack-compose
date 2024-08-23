@@ -21,6 +21,7 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2
 # Define work directory
 WORKDIR /app
 
+COPY scripts/utils.sh /app/utils.sh
 COPY ./entrypoints/${ENTRYPOINT_SCRIPT} /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 

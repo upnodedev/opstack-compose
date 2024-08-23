@@ -157,6 +157,7 @@ services:
     env_file:
       - .env
       - paths.env
+      - signer-proxy.env
       - opbatcher.env
     ports:
       - "8548:8548"
@@ -187,6 +188,7 @@ services:
     env_file:
       - .env
       - paths.env
+      - signer-proxy.env
       - opproposer.env
     ports:
       - "8560:8560"
