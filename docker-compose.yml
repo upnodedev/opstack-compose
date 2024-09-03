@@ -57,7 +57,7 @@ services:
       dockerfile: Dockerfile.signer-proxy
       args:
         REPO_URL: https://github.com/quertc/signer-proxy.git
-        TAG: v1.0.0-rc.7
+        TAG: v1.0.0-rc.1
     env_file:
       - .env
       - signer-proxy.env
