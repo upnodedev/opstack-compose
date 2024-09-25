@@ -4,3 +4,9 @@ data
 temp
 indexer.env
 ui.env
+.DS_Store
+
+blockscout/services/blockscout-db-data
+blockscout/services/logs
+blockscout/services/redis-data
+blockscout/services/stats-db-data
