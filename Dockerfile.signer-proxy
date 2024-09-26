@@ -1,0 +1,22 @@
+FROM rust:1.80.1 as builder
+
+ARG REPO_URL
+ARG TAG
+
+WORKDIR /app
+
+RUN git clone -b ${TAG} --depth 1 ${REPO_URL} . && \
+    cargo build --release --no-default-features
+
+FROM debian:bookworm-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /app/target/release/signer-proxy /usr/local/bin/signer-proxy
+
+COPY ./entrypoints/signer-proxy.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+ENTRYPOINT ["/app/entrypoint.sh"]

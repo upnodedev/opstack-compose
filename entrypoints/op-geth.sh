@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Initialize op-geth if datadir is empty
 if [ -d "$DATADIR_DIR" ] && [ -z "$(ls -A "$DATADIR_DIR")" ]; then

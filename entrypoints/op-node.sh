@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Check if SEQUENCER_MODE environment variable is set to false
 if [ "$SEQUENCER_MODE" != "true" ]; then
