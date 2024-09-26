@@ -1,4 +1,4 @@
-version: '3.9'
+version: "3.9"
 
 services:
   force-clone:
@@ -34,14 +34,17 @@ services:
       - "26659:26659"
       - "26658:26658"
     healthcheck:
-      test: ["CMD-SHELL", "\
-        if [ \"$${SKIP_HEALTHCHECK}\" = \"true\" ]; then \
+      test: [
+          "CMD-SHELL",
+          "\
+          if [ \"$${SKIP_HEALTHCHECK}\" = \"true\" ]; then \
           curl -f http://localhost:26659/header/1; \
-        else \
+          else \
           authToken=$$(celestia-da ${CELESTIA_NODE_TYPE} auth admin --p2p.network $$DA_P2P_NETWORK) && \
           catch_up_done=$$(curl -s -X POST -H 'Content-Type: application/json' -H \"Authorization: Bearer $$authToken\" --data '{\"id\":1, \"jsonrpc\":\"2.0\", \"method\":\"das.SamplingStats\", \"params\":[]}' http://localhost:26658 | jq -r '.result.catch_up_done') && \
           [ \"$$catch_up_done\" = \"true\" ]; \
-        fi"]
+          fi",
+        ]
       interval: 2m
       timeout: 10s
       retries: 60
@@ -174,7 +177,7 @@ services:
     image: grafana/grafana:11.1.0
     restart: unless-stopped
     env_file:
-      -  grafana.env
+      - grafana.env
     volumes:
       - ./monitoring/grafana/provisioning/:/etc/grafana/provisioning/:ro
       - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
@@ -192,6 +195,15 @@ services:
       - prometheus_data:/prometheus
     ports:
       - 9090:9090
+  json-server:
+    build:
+      context: ./serve
+      dockerfile: Dockerfile
+    volumes:
+      - ./data/deployments:/app/data/deployments
+    ports:
+      - "3001:3001"
+    restart: unless-stopped
 
 volumes:
   grafana_data:
