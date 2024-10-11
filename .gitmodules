@@ -1,0 +1,6 @@
+[submodule "bridge/indexer"]
+	path = bridge/indexer
+	url = https://github.com/upnodedev/opstack-bridge-indexer-v2.git
+[submodule "bridge/ui"]
+	path = bridge/ui
+	url = https://github.com/upnodedev/opstack-bridge-ui-v2.git
