@@ -20,3 +20,19 @@ derive_and_check() {
     export "$addr_var_name"="$derived_address"
   fi
 }
+
+get_address() {
+  local endpoint=$1
+  local response
+  response=$(curl -s "${endpoint}/address")
+
+  local address
+  address=$(echo "$response" | jq -r '.address')
+
+  if [ -z "$address" ]; then
+    echo "Error: Unable to fetch address from ${endpoint}/address"
+    exit 1
+  fi
+
+  echo "$address"
+}

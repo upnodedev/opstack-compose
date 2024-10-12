@@ -33,9 +33,13 @@ source .env
 # Initialize the command
 command="docker compose"
 
-# Add profiles based on SEQUENCER_MODE and Celestia support
+# Add profiles based on SEQUENCER_MODE, SIGNER_PROXY and Celestia support
 [ "$SEQUENCER_MODE" = "true" ] && command+=" --profile sequencer"
 [ "$CELESTIA_MODE" = "true" ] && command+=" --profile celestia"
+
+if [ "$SEQUENCER_MODE" = "true" ] && [ "$SIGNER_PROXY" = "true" ]; then
+  command+=" --profile signer-proxy"
+fi
 
 if [ "$SKIP_DEPLOYMENT_CHECK" = "true" ]; then
   echo -e "${ORANGE}NOTE${NC}: Only genesis.json and rollup.json will be checked (SKIP_DEPLOYMENT_CHECK=$SKIP_DEPLOYMENT_CHECK)."
@@ -49,7 +53,7 @@ fi
 command+=" up --build -d"
 
 # Confirm before running the command
-echo -ne "About to run: ${BLUE}$command${NC} (SEQUENCER_MODE: $SEQUENCER_MODE, CELESTIA_MODE: $CELESTIA_MODE). Do you want to continue? (yes/no): "
+echo -ne "About to run: ${BLUE}$command${NC} (SEQUENCER_MODE: $SEQUENCER_MODE, CELESTIA_MODE: $CELESTIA_MODE, SIGNER_PROXY: $SIGNER_PROXY). Do you want to continue? (yes/no): "
 read -r confirm
 if [[ "$confirm" =~ ^(yes|y)$ ]]; then
   eval "$command"

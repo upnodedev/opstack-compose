@@ -1,4 +1,23 @@
-#!/bin/sh
+#!/bin/bash
+
+# Check if SIGNER_PROXY environment variable is set to false
+if [ "$SIGNER_PROXY" != "true" ]; then
+  unset OP_PROPOSER_SIGNER_ENDPOINT
+  unset OP_PROPOSER_SIGNER_TLS_CA
+  unset OP_PROPOSER_SIGNER_TLS_CERT
+  unset OP_PROPOSER_SIGNER_TLS_KEY
+else
+  # shellcheck disable=SC1091
+  . /app/utils.sh
+
+  proposer_address=$(get_address "$OP_PROPOSER_SIGNER_ENDPOINT")
+  if [ -z "$OP_PROPOSER_SIGNER_ADDRESS" ]; then
+    export OP_PROPOSER_SIGNER_ADDRESS="$proposer_address"
+  elif [ "$OP_PROPOSER_SIGNER_ADDRESS" != "$proposer_address" ]; then
+    echo "Error: OP_PROPOSER_SIGNER_ADDRESS does not match the fetched address."
+    exit 1
+  fi
+fi
 
 # Check if OP_PROPOSER_PRIVATE_KEY environment variable is set
 if [ -z "$OP_PROPOSER_PRIVATE_KEY" ]; then
