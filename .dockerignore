@@ -1,4 +1,10 @@
-data
+# data
+data/bin
+data/bridge-indexer-db-data
+data/configurations
+data/datadir
+data/op-geth
+data/optimism
 
 blockscout/services/blockscout-db-data
 blockscout/services/logs
@@ -9,3 +15,10 @@ blockscout/services/data/blockscout-db-data
 blockscout/services/data/blockscout-logs
 blockscout/services/data/blockscout-redis-data
 blockscout/services/data/blockscout-stats-db-data
+
+bridge/ui/node_modules
+bridge/ui/dist
+
+bridge/indexer/node_modules
+bridge/indexer/dist
+bridge/indexer/data

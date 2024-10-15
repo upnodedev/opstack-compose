@@ -1,0 +1,28 @@
+# Use the official Node.js image.
+FROM node:20
+
+# Install jq (used in the bash script).
+RUN apt-get update && apt-get install -y jq
+
+# Set the working directory
+WORKDIR /app
+
+# Copy the artifact.json and .env file to the container
+COPY /data/deployments/artifact.json ./data/deployments/artifact.json
+COPY indexer.env ./.env
+COPY /scripts/config-bridge.sh .
+
+# Make the config script executable and run it
+RUN chmod +x config-bridge.sh && ./config-bridge.sh
+
+# Copy the package.json files for dependency installation
+COPY ./bridge/indexer/package*.json ./
+
+# Install production dependencies
+RUN npm install
+
+# Copy the rest of the local code to the container image
+COPY ./bridge/indexer .
+
+# Build the project
+RUN npm run build
