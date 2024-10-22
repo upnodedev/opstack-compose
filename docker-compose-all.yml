@@ -322,6 +322,12 @@ services:
       - '7512:5432'
     profiles:
       - opstack-bridge
+    healthcheck:
+      test: ["executable", "arg"]
+      interval: 1m30s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
   opstack-bridge-indexer-deposit:
     depends_on:
       op-geth:
