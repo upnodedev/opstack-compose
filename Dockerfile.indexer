@@ -1,19 +1,17 @@
 FROM node:20
 
-RUN apt-get update && apt-get install -y jq
+# RUN apt-get update && apt-get install -y jq
 
 WORKDIR /app
 
-COPY /data/deployments/artifact.json ./data/deployments/artifact.json
+# COPY /data/deployments/artifact.json ./data/deployments/artifact.json
 COPY indexer.env ./.env
 COPY /scripts/config-bridge.sh .
 
-RUN chmod +x config-bridge.sh && ./config-bridge.sh
+RUN chmod +x config-bridge.sh
 
 COPY ./bridge/indexer/package*.json ./
 
 RUN npm install
 
 COPY ./bridge/indexer .
-
-RUN npm run build

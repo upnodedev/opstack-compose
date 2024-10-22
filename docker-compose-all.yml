@@ -322,11 +322,6 @@ services:
       - '7512:5432'
     profiles:
       - opstack-bridge
-    depends_on:
-      op-geth:
-        condition: service_healthy
-      op-node:
-        condition: service_healthy
   opstack-bridge-indexer-deposit:
     depends_on:
       op-geth:
@@ -335,15 +330,20 @@ services:
         condition: service_healthy
       opstack-bridge-indexer-db:
         condition: service_healthy
+      force-clone:
+        condition: service_completed_successfully
     build:
       context: .
       dockerfile: Dockerfile.indexer
     restart: unless-stopped
-    command: ["./wait-for-it.sh", "opstack-bridge-indexer-db:5432", "--",'npm', 'run', 'deposit']
+    # command: ["./wait-for-it.sh", "opstack-bridge-indexer-db:5432", "--",'npm', 'run', 'deposit']
+    entrypoint: ["sh", "-c", "./config-bridge.sh && npm run build && npm run deposit"]
     stdin_open: true
     tty: true
     profiles:
       - opstack-bridge
+    volumes:
+      - ./data/deployments:/app/data/deployments
   opstack-bridge-indexer-withdrawal:
     depends_on:
       op-geth:
@@ -352,42 +352,61 @@ services:
         condition: service_healthy
       opstack-bridge-indexer-db:
         condition: service_healthy
+      force-clone:
+        condition: service_completed_successfully
     build:
       context: .
       dockerfile: Dockerfile.indexer
     restart: unless-stopped
-    command: ["./wait-for-it.sh", "opstack-bridge-indexer-db:5432", "--",'npm', 'run', 'withdrawal']
+    # command: ["./wait-for-it.sh", "opstack-bridge-indexer-db:5432", "--",'npm', 'run', 'withdrawal']
+    entrypoint: ["sh", "-c", "./config-bridge.sh && npm run build && npm run withdrawal"]
     stdin_open: true
     tty: true
     profiles:
       - opstack-bridge
+    volumes:
+      - ./data/deployments:/app/data/deployments
   opstack-bridge-indexer-server:
     build:
       context: .
       dockerfile: Dockerfile.indexer
     restart: unless-stopped
     depends_on:
-      - opstack-bridge-indexer-db
+      op-geth:
+        condition: service_healthy
+      op-node:
+        condition: service_healthy
+      opstack-bridge-indexer-db:
+        condition: service_healthy
+      force-clone:
+        condition: service_completed_successfully
     ports:
       - '3043:3000'
-    command: ['./wait-for-it.sh', 'opstack-bridge-indexer-db:5432', '--', 'npm', 'run', 'server']
+    # command: ['./wait-for-it.sh', 'opstack-bridge-indexer-db:5432', '--', 'npm', 'run', 'server']
+    entrypoint: ["sh", "-c", "./config-bridge.sh && npm run build && npm run server"]
     stdin_open: true
     tty: true
     profiles:
       - opstack-bridge
+    volumes:
+      - ./data/deployments:/app/data/deployments
   opstack-bridge-indexer-frontend:
     build:
       context: .
       dockerfile: Dockerfile.bridge-frontend
     restart: unless-stopped
     depends_on:
-      - opstack-bridge-indexer-db
+      force-clone:
+        condition: service_completed_successfully
     ports:
       - '3044:3000'
     stdin_open: true
     tty: true
     profiles:
       - opstack-bridge
+    volumes:
+      - ./data/deployments:/app/data/deployments
+    entrypoint: ["sh", "-c", "./config-bridge-ui.sh && npm run build && npm run preview"]
 
 
 volumes:
