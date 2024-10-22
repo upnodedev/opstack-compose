@@ -323,11 +323,10 @@ services:
     profiles:
       - opstack-bridge
     healthcheck:
-      test: ["executable", "arg"]
-      interval: 1m30s
-      timeout: 30s
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 10s
+      timeout: 5s
       retries: 5
-      start_period: 30s
   opstack-bridge-indexer-deposit:
     depends_on:
       op-geth:
